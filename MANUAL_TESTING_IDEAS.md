@@ -124,6 +124,30 @@ xor_all "1 1 0 1"   # true  — parity (odd count of 1s)
 is_zero "0 0 0 0"   # true  — the ALU zero flag, = ¬or_all
 ```
 
+### Word helpers and predicates
+
+```bash
+# inc/dec/negate are width-preserving (wrap two's-complement). Decode to check:
+b2d "$(inc "$(d2b 7 4)")"      # 8
+b2d "$(dec "$(d2b 0 4)")"      # 15   (0 - 1 wraps to all-ones = -1)
+b2d "$(negate "$(d2b 3 4)")"   # 13   (-3 mod 16)
+
+# a + (-a) must be 0 — tie negate back to the adder
+a=$(d2b 5 4)
+ripple_add4 $a $(negate "$a")  # 0 0 0 0 1  (sum bits all zero, carry out)
+
+# Predicates compose with if; sweep them over a range
+for n in 0 1 2 7 8 15; do
+    w=$(d2b $n 4)
+    printf "%2d: one=%-5s even=%-5s neg=%-5s  parity=%s popcount=%s\n" \
+        "$n" "$(is_one "$w")" "$(is_even "$w")" "$(is_negative "$w")" "$(parity "$w")" "$(popcount "$w")"
+done
+
+# is_negative is the signed sign bit — pair it with negate for |x|:
+abs() { if is_negative "$1" >/dev/null; then negate "$1"; else echo "$1"; fi; }
+b2d "$(abs "$(negate "$(d2b 5 4)")")"   # 5   (abs of -5)
+```
+
 ---
 
 ## Layer 1 — Adders

@@ -510,6 +510,61 @@ for w in "0 0 0 0" "1 0 0 0" "0 0 0 1" "1 1 1 1"; do
     check_str "is_zero = ¬or_all  [$w]" "$exp_zero" "$(is_zero "$w")"
 done
 
+# ── 4e-ii. Word helpers and predicates ────────────────────────────────────────
+section "inc / dec / negate (width-preserving two's complement)"
+# Results wrap mod 16; checked by decoding with bits_to_int.
+for n in 0 1 3 7 14 15; do
+    check_str "inc $n"    "$(( (n + 1)  % 16 ))" "$(bits_to_int "$(inc    "$(dec_to_bits $n 4)")")"
+    check_str "dec $n"    "$(( (n + 15) % 16 ))" "$(bits_to_int "$(dec    "$(dec_to_bits $n 4)")")"
+    check_str "negate $n" "$(( (16 - n) % 16 ))" "$(bits_to_int "$(negate "$(dec_to_bits $n 4)")")"
+done
+# Structural relationships.
+check_str "dec(inc 5) = 5"        "5" "$(bits_to_int "$(dec "$(inc "$(dec_to_bits 5 4)")")")"
+check_str "negate(negate 6) = 6"  "6" "$(bits_to_int "$(negate "$(negate "$(dec_to_bits 6 4)")")")"
+# a + (-a) = 0: the low 4 sum bits of ripple_add4(a, negate a) are all zero.
+for a in 1 5 9 13; do
+    sumbits=$(ripple_add4 $(dec_to_bits $a 4) $(negate "$(dec_to_bits $a 4)"))
+    check_str "a + (-a) = 0  [a=$a]" "0" "$(bits_to_int "${sumbits% *}")"   # drop carry field
+done
+
+section "predicates: is_one / is_even / is_odd / is_negative"
+check_exit "is_one(1) true"        0 is_one      "$(dec_to_bits 1 4)"
+check_exit "is_one(0) false"       1 is_one      "$(dec_to_bits 0 4)"
+check_exit "is_one(3) false"       1 is_one      "$(dec_to_bits 3 4)"
+check_exit "is_even(4) true"       0 is_even     "$(dec_to_bits 4 4)"
+check_exit "is_even(3) false"      1 is_even     "$(dec_to_bits 3 4)"
+check_exit "is_odd(3) true"        0 is_odd      "$(dec_to_bits 3 4)"
+check_exit "is_odd(4) false"       1 is_odd      "$(dec_to_bits 4 4)"
+check_exit "is_negative(8) true"   0 is_negative "$(dec_to_bits 8 4)"   # MSB set (8 = -8 signed)
+check_exit "is_negative(7) false"  1 is_negative "$(dec_to_bits 7 4)"
+# is_odd is exactly ¬is_even, and is_even ⟺ lsb = 0, across all 4-bit values.
+for n in $(seq 0 15); do
+    w=$(dec_to_bits $n 4)
+    if is_even "$w" >/dev/null; then ie=1; else ie=0; fi
+    if is_odd  "$w" >/dev/null; then io=1; else io=0; fi
+    check_str "is_even xor is_odd = 1  [$n]" "1" "$(( ie + io ))"
+    check_str "is_even ⟺ lsb=0  [$n]" "$([ "$(lsb "$w")" = 0 ] && echo 1 || echo 0)" "$ie"
+done
+
+section "parity / popcount / lsb / msb / bits_to_int"
+check_str "parity 1110 (3 ones, odd)"  "1" "$(parity "1 1 1 0")"
+check_str "parity 1100 (2 ones, even)" "0" "$(parity "1 1 0 0")"
+check_str "parity 0000"                "0" "$(parity "0 0 0 0")"
+check_str "popcount 1011"              "3" "$(popcount "1 0 1 1")"
+check_str "popcount 0000"              "0" "$(popcount "0 0 0 0")"
+check_str "popcount 1111"              "4" "$(popcount "1 1 1 1")"
+check_str "lsb of 9 (1001)"            "1" "$(lsb "$(dec_to_bits 9 4)")"
+check_str "msb of 9 (1001)"            "1" "$(msb "$(dec_to_bits 9 4)")"
+check_str "lsb of 6 (0110)"            "0" "$(lsb "$(dec_to_bits 6 4)")"
+check_str "msb of 6 (0110)"            "0" "$(msb "$(dec_to_bits 6 4)")"
+# parity = popcount mod 2; bits_to_int = the test helper bits_to_dec; round-trips.
+for n in $(seq 0 15); do
+    w=$(dec_to_bits $n 4)
+    check_str "parity = popcount%2  [$n]" "$(( $(popcount "$w") % 2 ))" "$(parity "$w")"
+    check_str "bits_to_int = n      [$n]" "$n" "$(bits_to_int "$w")"
+done
+check_str "bits_to_int round-trips int_to_bits(100)" "100" "$(bits_to_int "$(int_to_bits 100)")"
+
 # ── 4f. Shifts and the ALU ────────────────────────────────────────────────────
 section "shl / shr (logical shifts, width-preserving)"
 check_str "shl 3  = 6"   "0 1 1 0" "$(shl "$(dec_to_bits 3 4)")"

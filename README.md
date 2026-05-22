@@ -74,6 +74,25 @@ xor_all "1 1 0 1"                # true   (parity: odd number of 1s)
 is_zero "0 0 0 0"                # true   (¬or_all — the ALU zero flag)
 ```
 
+### Word helpers and predicates
+
+Convenience functions over bit-vectors. `inc`/`dec`/`negate` are width-preserving (results wrap two's-complement style); the `is_*` predicates echo `true`/`false` + exit code like the gates, so they compose with `if`.
+
+```bash
+inc "1 1 0 0"          # "0 0 1 0"   (3 + 1 = 4, width-preserving)
+dec "0 0 1 0"          # "1 1 0 0"   (4 - 1 = 3)
+negate "1 1 0 0"       # "1 0 1 1"   (-3 = 13 in 4-bit two's complement = ¬W + 1)
+
+is_one  "1 0 0 0"      # true        (also is_zero)
+is_even "1 1 0 0"      # false       (3 is odd; is_odd too — by the LSB)
+is_negative "0 0 1 1"  # true        (MSB set; the ALU's N flag as a predicate)
+
+parity   "1 1 1 0"     # 1           (parity bit: XOR of all bits, odd count)
+popcount "1 0 1 1"     # 3           (Hamming weight)
+lsb "1 0 0 1"          # 1     msb "1 0 0 1"   # 1
+bits_to_int "0 0 1 0"  # 4           (decode; inverse of int_to_bits)
+```
+
 ### Adders, subtractors, and comparators
 
 `half_adder` and `full_adder` operate on `0`/`1` bit strings and accept either digit or `true`/`false` string inputs. They compose into multi-bit ripple-carry adders, two's-complement subtractors, and magnitude comparators. All multi-bit strings are **LSB-first** (bit 0 first).
@@ -206,10 +225,10 @@ sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 
 ```bash
 bash test-boolean-funcs.sh
-# 588 passed, 0 failed
+# 696 passed, 0 failed
 ```
 
-Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions, all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts, the `alu4` ALU (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
+Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions, word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts, the `alu4` ALU (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
 
 ## Attribution
 
@@ -227,6 +246,11 @@ if_then  then_if  if_and_only_if
 # Word-level Boolean algebra (LSB-first bit strings)
 bool_to_bit  word_zip  word_not  word_and  word_or  word_xor
 and_all  or_all  xor_all  is_zero
+
+# Word helpers & predicates
+inc  dec  negate  bits_to_int
+is_one  is_even  is_odd  is_negative
+parity  popcount  lsb  msb
 
 # Adders, subtractors & comparators (LSB-first bit strings)
 half_adder  full_adder

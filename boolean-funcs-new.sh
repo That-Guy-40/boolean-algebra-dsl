@@ -573,6 +573,111 @@ is_zero ()
 #is_zero  "0 0 0 0"               # -> true
 
 
+# WORD HELPERS AND PREDICATES
+# Convenience functions over LSB-first bit-vectors. The inc/dec/negate helpers
+# return a word of the same width (results wrap, two's-complement style). The
+# is_* predicates echo true/false and set the exit code, like the gates, so they
+# drop into `if`. parity/popcount/lsb/msb/bits_to_int are plain readouts.
+
+inc ()
+{
+  # W + 1, width-preserving. Ripples a carry of 1 from the LSB through a chain of
+  # half adders: at each bit, (sum, carry) = half_adder(bit, carry_in).
+  local -a A; read -ra A <<< "$1"
+  local out="" i carry=1 r
+  for ((i=0; i<${#A[@]}; i++)); do
+    r=$(half_adder "${A[i]}" "$carry")
+    out+="$(first "$r") "
+    carry=$(second "$r")
+  done
+  echo "${out% }"
+}
+
+dec ()
+{
+  # W - 1, width-preserving. Ripples a borrow of 1 from the LSB:
+  #   diff   = bit XOR borrow
+  #   borrow = (NOT bit) AND borrow
+  local -a A; read -ra A <<< "$1"
+  local out="" i borrow=1 ai bb
+  for ((i=0; i<${#A[@]}; i++)); do
+    ai=$(bit_to_bool "${A[i]}"); bb=$(bit_to_bool "$borrow")
+    out+="$(bool_to_bit "$(ne "$ai" "$bb")") "
+    borrow=$(bool_to_bit "$(and "$(not "$ai")" "$bb")")
+  done
+  echo "${out% }"
+}
+
+negate () { inc "$(word_not "$1")"; }   # two's complement:  -W = (¬W) + 1
+
+is_one ()
+{
+  # true iff the word represents 1 — LSB set, every higher bit clear.
+  local -a A; read -ra A <<< "$1"
+  if [ "$(bit_to_bool "${A[0]}")" = true ] && is_zero "${A[*]:1}" >/dev/null
+  then echo true; true; else echo false; false; fi
+}
+
+is_even ()
+{
+  # true iff the value is even — LSB (bit 0) is 0.
+  local -a A; read -ra A <<< "$1"
+  if [ "$(bit_to_bool "${A[0]}")" = false ]; then echo true; true; else echo false; false; fi
+}
+
+is_odd () { if is_even "$1" >/dev/null; then echo false; false; else echo true; true; fi; }
+
+is_negative ()
+{
+  # true iff the two's-complement sign bit (the MSB) is set.
+  local -a A; read -ra A <<< "$1"
+  if [ "$(bit_to_bool "${A[${#A[@]}-1]}")" = true ]; then echo true; true; else echo false; false; fi
+}
+
+parity ()
+{
+  # Parity BIT (0/1) = XOR of all bits — i.e. bool_to_bit(xor_all). 1 = odd count
+  # of ones. (xor_all returns the same information as a true/false predicate.)
+  bool_to_bit "$(xor_all "$1")"
+}
+
+popcount ()
+{
+  # Number of 1 bits (Hamming weight), as a decimal integer.
+  local -a A; read -ra A <<< "$1"
+  local n=0 i
+  for ((i=0; i<${#A[@]}; i++)); do
+    [ "$(bit_to_bool "${A[i]}")" = true ] && n=$((n + 1))
+  done
+  echo "$n"
+}
+
+lsb () { local -a A; read -ra A <<< "$1"; echo "${A[0]}"; }              # least significant bit
+msb () { local -a A; read -ra A <<< "$1"; echo "${A[${#A[@]}-1]}"; }      # most significant bit
+
+bits_to_int ()
+{
+  # Decode an LSB-first bit string to a decimal integer (inverse of int_to_bits).
+  local -a A; read -ra A <<< "$1"
+  local d=0 i
+  for ((i=0; i<${#A[@]}; i++)); do
+    [ "$(bit_to_bool "${A[i]}")" = true ] && d=$((d + (1 << i)))
+  done
+  echo "$d"
+}
+
+# word-helper testing (LSB-first):
+#inc "1 1 0 0"                    # -> 0 0 1 0   (3 + 1 = 4)
+#dec "0 0 1 0"                    # -> 1 1 0 0   (4 - 1 = 3)
+#negate "1 1 0 0"                 # -> 1 0 1 1   (-3 = 13 in 4-bit two's complement)
+#is_one "1 0 0 0"                 # -> true
+#is_even "1 1 0 0"                # -> false  (3 is odd)
+#is_negative "0 0 1 1"            # -> true   (MSB set; 12 = -4 signed)
+#parity "1 1 1 0"                 # -> 1      (three ones = odd)
+#popcount "1 1 1 0"               # -> 3
+#bits_to_int "0 0 1 0"            # -> 4
+
+
 # SHIFTS AND THE ALU
 # Logical shifts (LSB-first, fixed width) and a 4-bit arithmetic-logic unit that
 # ties the whole Layer-1 stack together: the ripple adder/subtractor, the

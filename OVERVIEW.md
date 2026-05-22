@@ -119,6 +119,23 @@ xor_all  "1 1 0 1"             # true  (odd parity)
 is_zero  "0 0 0 0"             # true
 ```
 
+### Word helpers and predicates
+
+A layer of conveniences rounds out the bit-vector toolkit:
+
+| Group | Functions | Notes |
+|---|---|---|
+| Unit arithmetic | `inc` `dec` `negate` | width-preserving (wrap two's-complement); `inc` is a half-adder carry-ripple, `negate` = `¬W` then `inc` |
+| Value predicates | `is_zero` `is_one` `is_even` `is_odd` `is_negative` | echo true/false + exit code; `is_even` reads the LSB, `is_negative` the MSB (the ALU's N flag) |
+| Readouts | `parity` `popcount` `lsb` `msb` `bits_to_int` | `parity` = the parity bit (`= popcount mod 2`); `bits_to_int` is the decode inverse of `int_to_bits` |
+
+```bash
+inc "1 1 0 0"          # 0 0 1 0   (3 + 1 = 4)
+negate "1 1 0 0"       # 1 0 1 1   (-3 = 13 in two's complement)
+is_negative "0 0 1 1"  # true      (MSB set)
+parity "1 1 1 0"       # 1         popcount "1 1 1 0"  # 3
+```
+
 ---
 
 ## Layer 1 — Adders
@@ -517,7 +534,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 588 passed, 0 failed
+# 696 passed, 0 failed
 ```
 
 Coverage summary:
@@ -529,6 +546,7 @@ Coverage summary:
 | Boolean identities | De Morgan, double negation, idempotence, absorption, XOR inverse |
 | Boolean algebra axioms | Commutativity, associativity, distributivity, identity, complement, annihilator — all verified exhaustively over every input assignment |
 | Word-level Boolean ops | `word_not`/`word_and`/`word_or`/`word_xor` bitwise results, word De Morgan; `and_all`/`or_all`/`xor_all` parity, `is_zero` = ¬`or_all` |
+| Word helpers & predicates | `inc`/`dec`/`negate` wrap and inverses (`a + (−a) = 0`); `is_one`/`is_even`/`is_odd`/`is_negative` exhaustively; `parity = popcount mod 2`, `lsb`/`msb`, `bits_to_int` decode over all 4-bit values |
 | Shifts & ALU | `shl`/`shr` width-preserving shifts; `alu4` over every opcode plus Z/C/N/V flag cases (signed overflow on 3+5, no-borrow carry on 5−3, zero+carry+overflow on 8+8) and unknown-opcode rejection |
 | Adders | All 4 `half_adder` combinations with `true`/`false` strings; all 4 with `0`/`1` bit digits; 4 mixed inputs; all 8 `full_adder` combinations; `full_adder` string inputs |
 | Multi-bit adders | `ripple_add4` exact bit patterns + decoded sums over 30 input pairs + carry-in; `ripple_add8` low→high nibble carry propagation, 8-bit overflow, carry-in |
@@ -555,6 +573,11 @@ if_then  then_if  if_and_only_if
 # Word-level Boolean algebra (LSB-first bit strings)
 bool_to_bit  word_zip  word_not  word_and  word_or  word_xor
 and_all  or_all  xor_all  is_zero
+
+# Word helpers & predicates
+inc  dec  negate  bits_to_int
+is_one  is_even  is_odd  is_negative
+parity  popcount  lsb  msb
 
 # Adders, subtractors & comparators (LSB-first bit strings)
 half_adder  full_adder
