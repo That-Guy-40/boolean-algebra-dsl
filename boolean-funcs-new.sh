@@ -260,15 +260,16 @@ nand $(nand "$A" "$A") $(nand "$B" "$B")
 #if_then false false #return 0/true
 
 
-half_adder () 
+half_adder ()
 {
-#
   local A="$1"
   local B="$2"
 
-if is_true "$A"; then A=true; else A=false; fi
-
-if is_true "$B"; then B=true; else B=false; fi
+  # Accept 1/0 bits or true/false strings (same pattern as full_adder).
+  # is_true cannot be used here: it follows the shell exit-code convention
+  # where "0" = success = true, which is opposite to the bit convention.
+  case "$A" in 1|t|T|true|True) A=true ;; *) A=false ;; esac
+  case "$B" in 1|t|T|true|True) B=true ;; *) B=false ;; esac
 
 local sum="$(ne "$A" "$B")"
 local carry="$(and "$A" "$B")"

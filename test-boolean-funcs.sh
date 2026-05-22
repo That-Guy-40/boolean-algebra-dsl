@@ -230,13 +230,30 @@ for A in true false; do
 done
 
 # ── 4. Adders ─────────────────────────────────────────────────────────────────
-section "half_adder"
+section "half_adder (true/false string inputs)"
 # A half adder adds two single bits with no carry-in.
 # Output is "sum carry" as 0/1 digits; 1+1 = 0 with carry 1 (binary overflow).
-check_str "0+0 = sum=0 carry=0" "0 0" "$(half_adder false false)"
-check_str "0+1 = sum=1 carry=0" "1 0" "$(half_adder false true)"
-check_str "1+0 = sum=1 carry=0" "1 0" "$(half_adder true false)"
-check_str "1+1 = sum=0 carry=1" "0 1" "$(half_adder true true)"
+check_str "false+false = 0 0" "0 0" "$(half_adder false false)"
+check_str "false+true  = 1 0" "1 0" "$(half_adder false true)"
+check_str "true+false  = 1 0" "1 0" "$(half_adder true false)"
+check_str "true+true   = 0 1" "0 1" "$(half_adder true true)"
+
+section "half_adder (0/1 bit inputs)"
+# The fix: half_adder now uses a case statement (same as full_adder) so that
+# the bit "0" maps to false and "1" maps to true, rather than the shell
+# exit-code convention where is_true("0") = true.
+# Without the fix, half_adder 0 0 → "0 1" and half_adder 1 1 → "0 0".
+check_str "0+0 = 0 0" "0 0" "$(half_adder 0 0)"
+check_str "0+1 = 1 0" "1 0" "$(half_adder 0 1)"
+check_str "1+0 = 1 0" "1 0" "$(half_adder 1 0)"
+check_str "1+1 = 0 1" "0 1" "$(half_adder 1 1)"
+
+section "half_adder (mixed bit/string inputs)"
+# The case statement also handles T/F abbreviations and mixed 0/1 + true/false.
+check_str "0+true  = 1 0" "1 0" "$(half_adder 0 true)"
+check_str "1+false = 1 0" "1 0" "$(half_adder 1 false)"
+check_str "T+F     = 1 0" "1 0" "$(half_adder T F)"
+check_str "0+T     = 1 0" "1 0" "$(half_adder 0 T)"
 
 section "full_adder (all 8 combinations)"
 # A full adder adds two bits plus a carry-in from a previous stage.
