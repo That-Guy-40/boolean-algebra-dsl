@@ -107,9 +107,16 @@ operating on `0`/`1` bit strings.
 
 Adds two bits with no carry-in. Sum is XOR; carry is AND.
 
+Accepts either `true`/`false` strings or `0`/`1` bit digits — the same input
+convention as `full_adder`. Input normalisation uses a `case` statement rather
+than `is_true`, because `is_true` follows the shell exit-code convention where
+`"0"` = success = true, which is the opposite of the bit convention (0 = false).
+
 ```bash
 half_adder false true   # "1 0"  (0+1 = 1, no carry)
 half_adder true  true   # "0 1"  (1+1 = 0, carry 1)
+half_adder 0 1          # "1 0"  (same, using bit digits)
+half_adder 1 1          # "0 1"  (same, using bit digits)
 ```
 
 ### `full_adder A B Cin` → `"sum carry"`
@@ -365,7 +372,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 272 passed, 0 failed
+# 280 passed, 0 failed
 ```
 
 Coverage summary:
@@ -375,7 +382,7 @@ Coverage summary:
 | Boolean primitives | All synonym inputs to `is_true` / `is_false` |
 | Gate truth tables | All 4-row truth tables for every binary gate |
 | Boolean identities | De Morgan, double negation, idempotence, absorption, XOR inverse |
-| Adders | All 4 `half_adder` combinations; all 8 `full_adder` combinations; string inputs |
+| Adders | All 4 `half_adder` combinations with `true`/`false` strings; all 4 with `0`/`1` bit digits; 4 mixed inputs; all 8 `full_adder` combinations; `full_adder` string inputs |
 | EML | Base constructions; exp/ln mutual inverses; all five arithmetic ops; mul/div round-trips |
 | Math library | Key angles; Pythagorean identity `sin²+cos²=1`; odd/even symmetry; `cosh²−sinh²=1`; `tanh=sinh/cosh`; forward/inverse round-trips |
 | Edge cases — domain errors | `asin(±1)`, `acos(±1)`, `asec(±1)`, `acsc(±1)`, `atanh(±1)`, `csc(0)`, `cot(0)` — all produce empty output as expected |

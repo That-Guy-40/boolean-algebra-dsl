@@ -70,7 +70,8 @@ full_adder 1 1 1        # "1 1"  (1+1+1 = 3 = binary 11)
 
 The EML operator (`eml(x,y) = exp(x) − ln(y)`) is **functionally complete in continuous mathematics** — combining it with the constant `1` is sufficient to express all standard calculator functions, in the same way NAND is sufficient for all Boolean logic.
 
-Reference: Odrzywołek (2026).
+Original paper: Andrzej Odrzywołek, *"A Single Binary Operator for All Elementary Functions"*, arXiv:2603.21852v2 (2026).
+https://arxiv.org/abs/2603.21852v2
 
 ```bash
 eml 1 1               # e  (exp(1) − ln(1))
