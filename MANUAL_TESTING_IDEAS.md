@@ -136,6 +136,220 @@ ripple_add4  1 1 1 1  1 1 1 1  0   # → 0 1 1 1 1  (cout=1 → 30)
 
 ---
 
+## Layer 1 — Multi-bit Circuits: 8-bit adder, subtractor, comparator
+
+`ripple_add4`, `ripple_add8`, `ripple_sub4`, `ripple_sub8`, `flip_bit`,
+`bit_to_bool`, `bits_eq`, `bits_gt`, `compare4`, and `compare8` are all built-in
+functions — just `source ./boolean-funcs-new.sh` and call them. Everything below
+is LSB-first (bit 0 first).
+
+### Convenience helpers for interactive play
+
+The test suite defines `dec_to_bits` / `bits_to_dec`, but they aren't in the
+library. Paste these tiny equivalents so the snippets below are self-contained:
+
+```bash
+source ./boolean-funcs-new.sh
+
+d2b() { local n=$1 w=$2 i out=""; for ((i=0;i<w;i++)); do out+="$(( (n>>i)&1 )) "; done; echo "${out% }"; }
+b2d() { local d=0 i=0 b; for b in $1; do d=$((d+(b<<i))); i=$((i+1)); done; echo "$d"; }
+
+d2b 200 8                 # 0 0 0 1 1 0 0 1
+b2d "0 0 0 1 1 0 0 1"     # 200   (decoding the whole adder output incl. carry
+                          #        gives the exact unsigned value)
+```
+
+### 8-bit adder — watch the carry cross the nibble boundary
+
+`ripple_add8` is two `ripple_add4` units stitched together, so the most
+interesting cases are exactly the ones where the low nibble (bits 0–3) overflows
+and the carry has to cross into the high nibble (bits 4–7):
+
+```bash
+b2d "$(ripple_add8 $(d2b 15 8)  $(d2b 1 8))"    # 16   (1111+0001 carries into bit 4)
+b2d "$(ripple_add8 $(d2b 240 8) $(d2b 16 8))"   # 256  (high-nibble add, 8-bit overflow)
+```
+
+### 8-bit adder — agreement with plain shell arithmetic
+
+Sweep a grid and check every sum against `$((a+b))`:
+
+```bash
+for a in 0 37 100 200 255; do for b in 0 1 55 128 255; do
+    got=$(b2d "$(ripple_add8 $(d2b $a 8) $(d2b $b 8))")
+    printf "%3d + %3d = %3d  %s\n" "$a" "$b" "$got" \
+        "$([ "$got" = "$((a+b))" ] && echo ok || echo BAD)"
+done; done
+```
+
+### 8-bit adder — commutativity and identity
+
+```bash
+a=173; b=88
+echo "A+B = $(b2d "$(ripple_add8 $(d2b $a 8) $(d2b $b 8))")"   # must equal …
+echo "B+A = $(b2d "$(ripple_add8 $(d2b $b 8) $(d2b $a 8))")"   # … this
+b2d "$(ripple_add8 $(d2b 99 8) $(d2b 0 8))"                    # 99  (A + 0 = A)
+```
+
+### 8-bit adder — maximum carry propagation
+
+The hardest path for a ripple-carry adder is a single carry that has to travel
+through every stage. `255 + 1` is the canonical case — a carry born at bit 0
+ripples all the way to the carry-out:
+
+```bash
+ripple_add8 $(d2b 255 8) $(d2b 1 8)    # 0 0 0 0 0 0 0 0 1   (= 256)
+```
+
+### Extend the pattern — a 16-bit adder from two `ripple_add8`
+
+The very trick that builds `ripple_add8` from two `ripple_add4` builds a 16-bit
+adder from two `ripple_add8`: thread the low byte's carry-out into the high
+byte's carry-in.
+
+```bash
+ripple_add16() {
+    local -a A B L H
+    read -ra A <<< "$1"; read -ra B <<< "$2"        # two 16-bit LSB-first strings
+    read -ra L <<< "$(ripple_add8 ${A[*]:0:8}  ${B[*]:0:8})"
+    read -ra H <<< "$(ripple_add8 ${A[*]:8:8}  ${B[*]:8:8}  "${L[8]}")"
+    echo "${L[*]:0:8} ${H[*]:0:8} ${H[8]}"
+}
+
+b2d "$(ripple_add16 "$(d2b 1000 16)" "$(d2b 24 16)")"    # 1024
+b2d "$(ripple_add16 "$(d2b 65535 16)" "$(d2b 1 16)")"    # 65536 (16-bit overflow)
+```
+
+### Subtractor — the borrow flag tracks A vs B
+
+The trailing carry-out is the borrow flag: `1` = no borrow (`A ≥ B`), `0` =
+borrow (`A < B`):
+
+```bash
+for pair in "5 3" "3 5" "8 8" "0 1"; do
+    set -- $pair
+    out=$(ripple_sub4 $(d2b $1 4) $(d2b $2 4))
+    echo "$1 - $2 -> $out   borrow=$([ "${out##* }" = 1 ] && echo no || echo YES)"
+done
+```
+
+### Subtractor — signed results and A − A = 0
+
+A small signed decoder makes the two's-complement output readable:
+
+```bash
+sub4dec() { local -a o=($1); local v=$(b2d "${o[*]:0:4}"); [ "${o[4]}" = 0 ] && v=$((v-16)); echo "$v"; }
+
+for pair in "5 3" "3 5" "15 0" "0 15"; do
+    set -- $pair
+    echo "$1 - $2 = $(sub4dec "$(ripple_sub4 $(d2b $1 4) $(d2b $2 4))")  (want $(($1-$2)))"
+done
+
+# A - A is zero for every value (sum bits all 0, carry 1 = no borrow):
+for a in 0 1 7 8 15; do echo "$a - $a -> $(ripple_sub4 $(d2b $a 4) $(d2b $a 4))"; done
+```
+
+### Subtractor — the borrow chain (0 − 1 = all ones)
+
+The mirror image of the adder's max-carry case: `0 − 1` makes a borrow at bit 0
+that ripples through every bit, leaving the all-ones pattern (= −1):
+
+```bash
+ripple_sub4 $(d2b 0 4) $(d2b 1 4)   # 1 1 1 1 0   (1111 = -1, borrow)
+ripple_sub8 $(d2b 0 8) $(d2b 1 8)   # 1 1 1 1 1 1 1 1 0   (all ones = -1)
+```
+
+### Subtractor — round-trip (A − B) + B = A
+
+```bash
+a=12; b=7
+read -ra D <<< "$(ripple_sub4 $(d2b $a 4) $(d2b $b 4))"   # D[0..3] = A-B sum bits
+echo "(12 - 7) + 7 = $(b2d "$(ripple_add4 ${D[*]:0:4} $(d2b $b 4))")  (want 12)"
+```
+
+### Comparator — trichotomy (exactly one of lt / eq / gt)
+
+For any pair, exactly one of `bits_eq`, `bits_gt(A,B)`, `bits_gt(B,A)` holds —
+the three flags must always sum to 1:
+
+```bash
+for pair in "5 3" "3 5" "5 5"; do
+    set -- $pair; A=$(d2b $1 4); B=$(d2b $2 4)
+    eq=0; gt=0; lt=0
+    bits_eq "$A" "$B" >/dev/null && eq=1
+    bits_gt "$A" "$B" >/dev/null && gt=1
+    bits_gt "$B" "$A" >/dev/null && lt=1
+    echo "$1 vs $2: eq=$eq gt=$gt lt=$lt  sum=$((eq+gt+lt))  (must be 1)"
+done
+```
+
+### Comparator — cascaded priority: the MSB always wins
+
+The cascade is what separates a real comparator from "count the 1s". A single
+high bit must outweigh any number of lower bits:
+
+```bash
+compare4 $(d2b 8 4)  $(d2b 7 4)    # gt:  1000 > 0111  (8 wins despite 7 having more 1s)
+compare4 $(d2b 4 4)  $(d2b 3 4)    # gt:  0100 > 0011
+compare4 $(d2b 8 4)  $(d2b 15 4)   # lt:  once a higher bit differs, it decides
+```
+
+### Comparator — cross-check against the subtractor
+
+Two independent circuits should agree: `A > B` exactly when `A − B` has no borrow
+and a nonzero result. This is one of the strongest manual tests — it validates
+the comparator and the subtractor against each other:
+
+```bash
+for pair in "5 3" "3 5" "8 8" "12 4" "0 9"; do
+    set -- $pair; A=$(d2b $1 4); B=$(d2b $2 4)
+    cmp=$(compare4 $A $B)
+    out=$(ripple_sub4 $A $B); read -ra D <<< "$out"
+    mag=$(b2d "${D[*]:0:4}")
+    sub=$([ "${out##* }" = 0 ] && echo lt || { [ "$mag" = 0 ] && echo eq || echo gt; })
+    echo "$1 vs $2: compare4=$cmp  subtractor=$sub  $([ "$cmp" = "$sub" ] && echo AGREE || echo DISAGREE)"
+done
+```
+
+### Comparator — transitivity
+
+```bash
+A=$(d2b 12 4); B=$(d2b 7 4); C=$(d2b 3 4)
+bits_gt "$A" "$B" >/dev/null && bits_gt "$B" "$C" >/dev/null \
+    && bits_gt "$A" "$C" >/dev/null && echo "12 > 7 > 3, and 12 > 3  ✓ transitive"
+```
+
+### Comparator — equality breaks on any single bit flip
+
+`bits_eq` should be true only for an exact match. Flip each bit of a value in
+turn; every flip must break equality:
+
+```bash
+A="1 0 1 1"
+for i in 0 1 2 3; do
+    B=($A); B[$i]=$(flip_bit "${B[$i]}")
+    bits_eq "$A" "${B[*]}" >/dev/null \
+        && echo "bit $i: still equal?!" \
+        || echo "bit $i flipped -> not equal"
+done
+```
+
+### Comparator — capstone: sort a list with `compare4`
+
+A small bubble sort driven entirely by the gate-level comparator:
+
+```bash
+arr=(9 2 14 5 8 1); n=${#arr[@]}
+for ((i=0; i<n; i++)); do for ((j=0; j<n-1-i; j++)); do
+    if [ "$(compare4 $(d2b ${arr[j]} 4) $(d2b ${arr[j+1]} 4))" = gt ]; then
+        t=${arr[j]}; arr[j]=${arr[j+1]}; arr[j+1]=$t
+    fi
+done; done
+echo "sorted: ${arr[*]}"    # 1 2 5 8 9 14
+```
+
+---
+
 ## Layer 2 — EML Operator
 
 ### Verify the ln derivation step by step
@@ -281,8 +495,10 @@ done
 
 ## Implemented Extensions
 
-These started as ideas below and are now built-in library functions (see the
-adder/subtractor tests in `test-boolean-funcs.sh`):
+These started as ideas below and are now built-in library functions. Each has a
+dedicated set of manual-testing snippets in
+[Layer 1 — Multi-bit Circuits](#layer-1--multi-bit-circuits-8-bit-adder-subtractor-comparator)
+above, and automated coverage in `test-boolean-funcs.sh`:
 
 - **8-bit adder** — `ripple_add8` chains two `ripple_add4` units, connecting the
   carry-out of the low nibble to the carry-in of the high nibble.
@@ -290,21 +506,6 @@ adder/subtractor tests in `test-boolean-funcs.sh`):
   `flip_bit`) and feed `Cin=1` to perform two's-complement subtraction.
 - **Comparator** — `bits_eq` (XNOR of all bit-pairs, ANDed) and `bits_gt`
   (cascaded priority from the MSB); `compare4` / `compare8` echo `lt`/`eq`/`gt`.
-
-```bash
-# 8-bit add with a carry that crosses the nibble boundary
-ripple_add8 $(dec_to_bits 200 8) $(dec_to_bits 100 8)   # = 300
-
-# subtraction, with the carry-out acting as the borrow flag
-ripple_sub4 1 0 1 0  1 1 0 0     # 5 - 3 = "0 1 0 0 1"  (D=2, no borrow)
-ripple_sub4 1 1 0 0  1 0 1 0     # 3 - 5 = "0 1 1 1 0"  (D=-2, borrow)
-
-# comparison
-compare4 1 0 1 0  1 1 0 0        # 5 vs 3 -> gt
-compare4 0 0 0 1  1 1 1 0        # 8 vs 7 -> gt  (MSB decides, not bit count)
-```
-
-(`dec_to_bits N WIDTH` is a convenience helper defined in the test suite.)
 
 ## Ideas for Further Extension
 
