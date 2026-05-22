@@ -139,8 +139,8 @@ Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR 
 
 ## Attribution
 
-- **[That-Guy-40](https://github.com/That-Guy-40)** — original idea, Boolean DSL layer, half-adder (subsequently debugged), integration work, and manual testing.
 - **Claude Opus** — EML operator derivations, bootstrapped math library, full-adder fix, and test suite.
+- **[That-Guy-40](https://github.com/That-Guy-40)** — original idea, Boolean DSL layer, half-adder (subsequently debugged), integration work, and manual testing.
 
 ## Reference
 
