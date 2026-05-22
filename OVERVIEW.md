@@ -25,8 +25,8 @@ below it.
 │  EML operator                               │  eml, eml_exp, eml_ln, eml_sub, …
 │  (functionally complete in ℝ)              │
 ├─────────────────────────────────────────────┤
-│  Boolean DSL                                │  nand, and, or, not, ne, eq, …
-│  (shell exit codes + echoed strings)        │
+│  Boolean algebra → circuits → ALU           │  and/or/not, adders, comparator,
+│  (shell exit codes + echoed strings)        │  word ops, alu4
 └─────────────────────────────────────────────┘
 ```
 
@@ -218,6 +218,47 @@ if bits_eq "1 0 1 0" "1 0 1 0"; then echo equal; fi   # composes with if
 The `8 vs 7` case (`1000` vs `0111`) is the one a naive "count the 1s" approach
 gets wrong: cascaded priority correctly lets the single high bit of 8 outweigh
 the three low bits of 7.
+
+---
+
+## Layer 1 — Shifts and the ALU (capstone)
+
+`shl` / `shr` are width-preserving logical shifts (multiply / divide by 2ⁿ,
+dropping bits that fall off the end). They, the adders, the subtractor, the
+word-level bitwise ops, the comparator, and `is_zero` all come together in a
+4-bit **arithmetic-logic unit** — the piece that shows the whole bottom layer is
+a working processor data path, not just isolated gates.
+
+```
+alu4 OP  A0 A1 A2 A3  B0 B1 B2 B3   ->   R0 R1 R2 R3 Z C N V
+```
+
+| Group | Opcodes | Circuit used |
+|---|---|---|
+| Arithmetic | `add` `sub` | `ripple_add4` / `ripple_sub4` |
+| Logic | `and` `or` `xor` `not` | `word_and` / `word_or` / `word_xor` / `word_not` |
+| Compare | `slt` (set if A < B) | `bits_gt` |
+| Shift | `shl` `shr` | `shl` / `shr` |
+
+The four **status flags** are computed the way real hardware does:
+
+- **Z** (zero) — `is_zero` of the result (the OR-reduce reduction from above).
+- **C** (carry) — the adder/subtractor carry-out (`1` = no borrow on `sub`), or
+  the bit shifted out on `shl`/`shr`.
+- **N** (negative) — the result's MSB, i.e. its two's-complement sign.
+- **V** (overflow) — signed overflow on `add`/`sub`, derived from the operand and
+  result sign bits.
+
+```bash
+alu4 add 1 1 0 0  1 0 1 0     # 3 + 5 -> 0 0 0 1 0 0 1 1
+#                                        └─ 8 ─┘ Z C N V
+#   8 is outside signed 4-bit's -8..+7, so V=1 (overflow) and N=1 (reads as -8).
+alu4 sub 1 0 1 0  1 1 0 0     # 5 - 3 -> 0 1 0 0 0 1 0 0   (=2, C=1 no borrow)
+alu4 add 0 0 0 1  0 0 0 1     # 8 + 8 -> 0 0 0 0 1 1 0 1   (wraps to 0: Z, C, V all set)
+```
+
+This is the headline cross-circuit demo: a single call routes operands through
+whichever gate network the opcode selects and reports processor-style flags.
 
 ---
 
@@ -476,7 +517,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 567 passed, 0 failed
+# 588 passed, 0 failed
 ```
 
 Coverage summary:
@@ -488,6 +529,7 @@ Coverage summary:
 | Boolean identities | De Morgan, double negation, idempotence, absorption, XOR inverse |
 | Boolean algebra axioms | Commutativity, associativity, distributivity, identity, complement, annihilator — all verified exhaustively over every input assignment |
 | Word-level Boolean ops | `word_not`/`word_and`/`word_or`/`word_xor` bitwise results, word De Morgan; `and_all`/`or_all`/`xor_all` parity, `is_zero` = ¬`or_all` |
+| Shifts & ALU | `shl`/`shr` width-preserving shifts; `alu4` over every opcode plus Z/C/N/V flag cases (signed overflow on 3+5, no-borrow carry on 5−3, zero+carry+overflow on 8+8) and unknown-opcode rejection |
 | Adders | All 4 `half_adder` combinations with `true`/`false` strings; all 4 with `0`/`1` bit digits; 4 mixed inputs; all 8 `full_adder` combinations; `full_adder` string inputs |
 | Multi-bit adders | `ripple_add4` exact bit patterns + decoded sums over 30 input pairs + carry-in; `ripple_add8` low→high nibble carry propagation, 8-bit overflow, carry-in |
 | Subtractors | `flip_bit` truth table; `ripple_sub4` / `ripple_sub8` signed two's-complement results (positive and negative) and borrow-flag (carry-out) semantics |
@@ -520,6 +562,9 @@ ripple_add4  ripple_add8
 flip_bit  ripple_sub4  ripple_sub8
 bit_to_bool  bits_eq  bits_gt  compare4  compare8
 int_to_bits
+
+# Shifts & ALU
+shl  shr  alu4
 
 # List accessors
 lhead  ltail  first  second

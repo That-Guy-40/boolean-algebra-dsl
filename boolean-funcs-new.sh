@@ -573,6 +573,81 @@ is_zero ()
 #is_zero  "0 0 0 0"               # -> true
 
 
+# SHIFTS AND THE ALU
+# Logical shifts (LSB-first, fixed width) and a 4-bit arithmetic-logic unit that
+# ties the whole Layer-1 stack together: the ripple adder/subtractor, the
+# word-level bitwise ops, the comparator, the shifters, and is_zero for a flag.
+
+shl ()
+{
+  # Logical shift left by n (default 1), preserving width. LSB-first, so a left
+  # shift moves each bit to a higher index (multiply by 2ⁿ); vacated low bits
+  # are 0 and bits past the top are dropped.
+  local -a A; read -ra A <<< "$1"
+  local n="${2:-1}" w=${#A[@]} out="" i src
+  for ((i=0; i<w; i++)); do
+    src=$((i - n))
+    if [ "$src" -ge 0 ]; then out+="${A[src]} "; else out+="0 "; fi
+  done
+  echo "${out% }"
+}
+
+shr ()
+{
+  # Logical shift right by n (default 1), preserving width (divide by 2ⁿ).
+  local -a A; read -ra A <<< "$1"
+  local n="${2:-1}" w=${#A[@]} out="" i src
+  for ((i=0; i<w; i++)); do
+    src=$((i + n))
+    if [ "$src" -lt "$w" ]; then out+="${A[src]} "; else out+="0 "; fi
+  done
+  echo "${out% }"
+}
+
+alu4 ()
+{
+  # 4-bit ALU.  alu4 OP  A0 A1 A2 A3  B0 B1 B2 B3   (LSB-first)
+  #   OP ∈ add sub and or xor not slt shl shr
+  # Output:  "R0 R1 R2 R3 Z C N V"  — 4 result bits then four status flags:
+  #   Z zero (result is all zeros), C carry-out (add/sub) or shifted-out bit,
+  #   N negative (result MSB, two's-complement sign), V signed overflow (add/sub).
+  # Data path is all circuits: ripple_add4/ripple_sub4, word_*, bits_gt, shl/shr.
+  local op="$1"; shift
+  local A="$1 $2 $3 $4" B="$5 $6 $7 $8" a3="$4" b3="$8"
+  local result c=0 r
+  case "$op" in
+    add) r=$(ripple_add4 $A $B); result="${r% *}"; c="${r##* }" ;;
+    sub) r=$(ripple_sub4 $A $B); result="${r% *}"; c="${r##* }" ;;  # C=1 means no borrow
+    and) result=$(word_and "$A" "$B") ;;
+    or)  result=$(word_or  "$A" "$B") ;;
+    xor) result=$(word_xor "$A" "$B") ;;
+    not) result=$(word_not "$A") ;;                                  # unary; B ignored
+    slt) if bits_gt "$B" "$A" >/dev/null; then result="1 0 0 0"; else result="0 0 0 0"; fi ;;
+    shl) result=$(shl "$A" 1); c="$4" ;;                             # C = bit shifted out (MSB)
+    shr) result=$(shr "$A" 1); c="$1" ;;                             # C = bit shifted out (LSB)
+    *)   echo "alu4: unknown op '$op'" >&2; return 2 ;;
+  esac
+  local -a R; read -ra R <<< "$result"
+  local n="${R[3]}" z v=0
+  if is_zero "$result" >/dev/null; then z=1; else z=0; fi
+  # Signed overflow: add when operands share a sign but the result flips it;
+  # sub when operands differ in sign and the result's sign differs from A's.
+  case "$op" in
+    add) [ "$a3" = "$b3" ]  && [ "${R[3]}" != "$a3" ] && v=1 ;;
+    sub) [ "$a3" != "$b3" ] && [ "${R[3]}" != "$a3" ] && v=1 ;;
+  esac
+  echo "$result $z $c $n $v"
+}
+
+# shift / ALU testing (LSB-first; ALU output = R0 R1 R2 R3 Z C N V):
+#shl "1 1 0 0"                 # -> 0 1 1 0   (3 << 1 = 6)
+#shr "1 1 0 0"                 # -> 1 0 0 0   (3 >> 1 = 1)
+#alu4 add 1 1 0 0  1 0 1 0     # -> 0 0 0 1 0 0 1 1   (3+5=8: overflow V=1, N=1)
+#alu4 sub 1 0 1 0  1 1 0 0     # -> 0 1 0 0 0 1 0 0   (5-3=2: C=1 no borrow)
+#alu4 and 1 1 0 0  1 0 1 0     # -> 1 0 0 0 0 0 0 0   (3 & 5 = 1)
+#alu4 slt 1 1 0 0  1 0 1 0     # -> 1 0 0 0 0 0 0 0   (3 < 5 -> 1)
+
+
 # EML OPERATOR
 # eml(x, y) = exp(x) - ln(y)
 # Introduced by Odrzywołek (2026). Functionally complete in continuous mathematics:

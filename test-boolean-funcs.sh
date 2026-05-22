@@ -510,6 +510,38 @@ for w in "0 0 0 0" "1 0 0 0" "0 0 0 1" "1 1 1 1"; do
     check_str "is_zero = ¬or_all  [$w]" "$exp_zero" "$(is_zero "$w")"
 done
 
+# ── 4f. Shifts and the ALU ────────────────────────────────────────────────────
+section "shl / shr (logical shifts, width-preserving)"
+check_str "shl 3  = 6"   "0 1 1 0" "$(shl "$(dec_to_bits 3 4)")"
+check_str "shr 3  = 1"   "1 0 0 0" "$(shr "$(dec_to_bits 3 4)")"
+check_str "shl 12 = 8"   "0 0 0 1" "$(shl "$(dec_to_bits 12 4)")"   # top bit shifted out
+check_str "shr 1  = 0"   "0 0 0 0" "$(shr "$(dec_to_bits 1 4)")"    # bottom bit shifted out
+check_str "shl 1 by 2"   "0 0 1 0" "$(shl "$(dec_to_bits 1 4)" 2)"  # 1 << 2 = 4
+check_str "decode 5<<1"  "10"      "$(bits_to_dec "$(shl "$(dec_to_bits 5 4)")")"
+
+section "alu4 — result + flags (R0 R1 R2 R3 Z C N V)"
+# add 3+5=8 overflows signed 4-bit (range -8..7): V=1, N=1, no unsigned carry.
+check_str "add 3+5  -> 8 (V,N)"  "0 0 0 1 0 0 1 1" "$(alu4 add $(dec_to_bits 3 4) $(dec_to_bits 5 4))"
+check_str "add 2+3  -> 5"        "1 0 1 0 0 0 0 0" "$(alu4 add $(dec_to_bits 2 4) $(dec_to_bits 3 4))"
+check_str "sub 5-3  -> 2 (C=1)"  "0 1 0 0 0 1 0 0" "$(alu4 sub $(dec_to_bits 5 4) $(dec_to_bits 3 4))"
+check_str "sub 3-5  -> -2 (N=1)" "0 1 1 1 0 0 1 0" "$(alu4 sub $(dec_to_bits 3 4) $(dec_to_bits 5 4))"
+check_str "and 3&5  -> 1"        "1 0 0 0 0 0 0 0" "$(alu4 and $(dec_to_bits 3 4) $(dec_to_bits 5 4))"
+check_str "or  3|5  -> 7"        "1 1 1 0 0 0 0 0" "$(alu4 or  $(dec_to_bits 3 4) $(dec_to_bits 5 4))"
+check_str "xor 3^5  -> 6"        "0 1 1 0 0 0 0 0" "$(alu4 xor $(dec_to_bits 3 4) $(dec_to_bits 5 4))"
+check_str "not 3    -> 12 (N=1)" "0 0 1 1 0 0 1 0" "$(alu4 not $(dec_to_bits 3 4) $(dec_to_bits 0 4))"
+check_str "slt 3<5  -> 1"        "1 0 0 0 0 0 0 0" "$(alu4 slt $(dec_to_bits 3 4) $(dec_to_bits 5 4))"
+check_str "slt 5<3  -> 0 (Z=1)"  "0 0 0 0 1 0 0 0" "$(alu4 slt $(dec_to_bits 5 4) $(dec_to_bits 3 4))"
+check_str "shl 3    -> 6"        "0 1 1 0 0 0 0 0" "$(alu4 shl $(dec_to_bits 3 4) $(dec_to_bits 0 4))"
+check_str "shr 3    -> 1 (C=1)"  "1 0 0 0 0 1 0 0" "$(alu4 shr $(dec_to_bits 3 4) $(dec_to_bits 0 4))"
+
+section "alu4 — flag spot checks"
+# Zero flag: A XOR A = 0 sets Z.
+check_str "xor 6^6 -> 0 (Z=1)"   "0 0 0 0 1 0 0 0" "$(alu4 xor $(dec_to_bits 6 4) $(dec_to_bits 6 4))"
+# 8+8 = 16 wraps to 0: unsigned carry C=1, signed overflow V=1, zero Z=1.
+check_str "add 8+8 wraps (Z,C,V)" "0 0 0 0 1 1 0 1" "$(alu4 add $(dec_to_bits 8 4) $(dec_to_bits 8 4))"
+# Unknown opcode is rejected.
+check_exit "alu4 bad op -> exit 2" 2 alu4 frobnicate 0 0 0 0 0 0 0 0
+
 # ── 5. EML operator ───────────────────────────────────────────────────────────
 # eml(x,y) = exp(x) - ln(y). The EML operator is "functionally complete" in the
 # sense that exp, ln, and all arithmetic can be expressed as trees of eml nodes

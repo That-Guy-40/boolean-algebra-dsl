@@ -100,6 +100,23 @@ if bits_gt "$(echo 1 0 1 0)" "$(echo 1 1 0 0)"; then echo "5 > 3"; fi
 
 Equality is the XNOR of every bit pair, all ANDed together; greater-than uses cascaded priority logic from the MSB down (the first differing bit decides). Less-than is `bits_gt` with the operands swapped.
 
+### Shifts and the ALU
+
+`shl` / `shr` are width-preserving logical shifts. The capstone is **`alu4`** — a 4-bit arithmetic-logic unit whose data path is built entirely from the circuits above (ripple adder/subtractor, word-level bitwise ops, the comparator for `slt`, the shifters) plus `is_zero` for a status flag:
+
+```bash
+# alu4 OP  A0 A1 A2 A3  B0 B1 B2 B3   ->   "R0 R1 R2 R3 Z C N V"
+#   OP ∈ add sub and or xor not slt shl shr
+#   flags: Z zero, C carry/shift-out, N negative (sign), V signed overflow
+
+alu4 add 1 1 0 0  1 0 1 0    # 3+5  -> "0 0 0 1 0 0 1 1"  (=8: V=1 overflow, N=1)
+alu4 sub 1 0 1 0  1 1 0 0    # 5-3  -> "0 1 0 0 0 1 0 0"  (=2: C=1 no borrow)
+alu4 and 1 1 0 0  1 0 1 0    # 3&5  -> "1 0 0 0 0 0 0 0"  (=1)
+alu4 slt 1 1 0 0  1 0 1 0    # 3<5  -> "1 0 0 0 0 0 0 0"  (set: 1)
+```
+
+The `add 3+5` result shows the flags working: 8 is outside signed 4-bit's −8..+7 range, so the overflow flag `V` and negative flag `N` both fire.
+
 ## Layer 2 — EML Operator
 
 The EML operator (`eml(x,y) = exp(x) − ln(y)`) is **functionally complete in continuous mathematics** — combining it with the constant `1` is sufficient to express all standard calculator functions, in the same way NAND is sufficient for all Boolean logic.
@@ -189,10 +206,10 @@ sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 
 ```bash
 bash test-boolean-funcs.sh
-# 567 passed, 0 failed
+# 588 passed, 0 failed
 ```
 
-Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions, all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
+Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions, all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts, the `alu4` ALU (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
 
 ## Attribution
 
@@ -217,6 +234,9 @@ ripple_add4  ripple_add8
 flip_bit  ripple_sub4  ripple_sub8
 bit_to_bool  bits_eq  bits_gt  compare4  compare8
 int_to_bits
+
+# Shifts & ALU
+shl  shr  alu4
 
 # List accessors
 lhead  ltail  first  second

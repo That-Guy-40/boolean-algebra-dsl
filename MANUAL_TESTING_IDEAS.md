@@ -386,6 +386,66 @@ done; done
 echo "sorted: ${arr[*]}"    # 1 2 5 8 9 14
 ```
 
+### Shifts — multiply and divide by powers of two
+
+```bash
+b2d "$(shl "$(d2b 3 4)")"    # 6   (3 << 1)
+b2d "$(shr "$(d2b 12 4)")"   # 6   (12 >> 1)
+b2d "$(shl "$(d2b 1 4)" 2)"  # 4   (1 << 2)
+shl "$(d2b 12 4)"            # 0 0 0 1  — top bit falls off (12<<1 = 24, mod 16 = 8)
+```
+
+### ALU — drive it like a tiny processor
+
+`alu4 OP A B` returns `R0 R1 R2 R3 Z C N V`. A helper to read it back:
+
+```bash
+alu_show() {                       # alu_show OP a b  (a,b decimal 0..15)
+    local op=$1 a=$2 b=$3 out res flags
+    out=$(alu4 $op $(d2b $a 4) $(d2b $b 4))
+    res="${out% * * * *}"          # first 4 fields = result bits
+    flags="${out#* * * * }"        # last 4 = Z C N V
+    printf "%-4s %2d,%2d -> %2d   ZCNV=%s\n" "$op" "$a" "$b" "$(b2d "$res")" "$flags"
+}
+
+for op in add sub and or xor slt shl shr; do alu_show $op 6 3; done
+alu_show not 6 0
+```
+
+### ALU — make each flag fire
+
+```bash
+alu_show add 3 5     # V=1, N=1 : 3+5=8 overflows signed 4-bit (-8..7)
+alu_show add 8 8     # Z=1 C=1 V=1 : 8+8=16 wraps to 0, unsigned carry + signed overflow
+alu_show sub 5 3     # C=1 : no borrow (A>=B)
+alu_show sub 3 5     # C=0 N=1 : borrow, result is two's-complement -2
+alu_show slt 5 3     # Z=1 : 5<3 is false, result 0
+```
+
+### ALU — build a multiplier out of it (shift-and-add)
+
+The ALU plus shifts is enough to multiply, the way a CPU without a hardware
+multiplier would — add the multiplicand wherever the multiplier has a 1 bit,
+shifting left each step:
+
+```bash
+alu_add() {                         # decimal a + b via the ALU (ignores overflow)
+    b2d "$(echo "$(alu4 add $(d2b $1 4) $(d2b $2 4))" | cut -d' ' -f1-4)"
+}
+mul() {                             # a * b by shift-and-add (small values)
+    local b=$2 acc=0 shifted=$1     # note: read $1 directly — `shifted=$a` on a
+    while [ "$b" -gt 0 ]; do         # `local a=$1 … shifted=$a` line sees the outer a
+        [ $((b & 1)) -eq 1 ] && acc=$(alu_add $acc $shifted)
+        shifted=$((shifted * 2)); b=$((b >> 1))
+    done
+    echo "$acc"
+}
+mul 3 4    # 12
+mul 5 3    # 15
+```
+
+(Keep products ≤ 15 so they fit the 4-bit ALU; widening to `alu8` would lift that.)
+
 ---
 
 ## Layer 2 — EML Operator
