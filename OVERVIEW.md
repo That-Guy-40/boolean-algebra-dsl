@@ -85,16 +85,39 @@ not(A) or B      → if_then
 | `if_and_only_if A B` | A↔B | inputs differ |
 | `or_nand A B` | A∨B | both false (alt. impl.) |
 
-### Boolean algebraic identities
+### A genuine Boolean algebra
 
-The test suite verifies these hold across all input combinations:
+`(or = ∨, and = ∧, not = ¬, false = 0, true = 1)` is not merely a set of gates —
+it satisfies the **axioms of a Boolean algebra**, and the test suite verifies
+each one exhaustively over all input assignments:
 
-- **Double negation**: `not(not A) = A`
-- **De Morgan (AND)**: `not(A and B) = or(not A)(not B)`
-- **De Morgan (OR)**: `not(A or B) = and(not A)(not B)`
-- **Idempotence**: `and A A = A`, `or A A = A`
-- **Absorption**: `or A (and A B) = A`
-- **XOR self-inverse**: `ne A A = false`
+| Axiom | Law |
+|---|---|
+| Commutativity | `A∨B = B∨A`, `A∧B = B∧A` |
+| Associativity | `(A∨B)∨C = A∨(B∨C)`, `(A∧B)∧C = A∧(B∧C)` |
+| Distributivity | `A∧(B∨C) = (A∧B)∨(A∧C)`, `A∨(B∧C) = (A∨B)∧(A∨C)` |
+| Identity | `A∨0 = A`, `A∧1 = A` |
+| Complement | `A∨¬A = 1`, `A∧¬A = 0` |
+| Annihilator | `A∨1 = 1`, `A∧0 = 0` |
+| Absorption | `A∨(A∧B) = A`, `A∧(A∨B) = A` |
+| Idempotence | `A∨A = A`, `A∧A = A` |
+| Involution | `¬¬A = A` |
+| De Morgan | `¬(A∧B) = ¬A∨¬B`, `¬(A∨B) = ¬A∧¬B` |
+
+### Boolean algebra over bit-vectors
+
+The same algebra lifts from single bits to whole **words** (LSB-first strings).
+`word_not`/`word_and`/`word_or`/`word_xor` apply a gate position-wise (all built
+on the generic `word_zip GATE A B`), and the reductions fold a word to one
+Boolean: `and_all`, `or_all`, `xor_all` (parity), and `is_zero` (`= ¬or_all`,
+the ALU's zero flag). `bit_to_bool` / `bool_to_bit` bridge the `0`/`1` bit
+convention and the `true`/`false` the gates speak.
+
+```bash
+word_and "1 1 0 0" "1 0 1 0"   # 1 0 0 0
+xor_all  "1 1 0 1"             # true  (odd parity)
+is_zero  "0 0 0 0"             # true
+```
 
 ---
 
@@ -453,7 +476,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 496 passed, 0 failed
+# 567 passed, 0 failed
 ```
 
 Coverage summary:
@@ -463,6 +486,8 @@ Coverage summary:
 | Boolean primitives | All synonym inputs to `is_true` / `is_false` |
 | Gate truth tables | All 4-row truth tables for every binary gate |
 | Boolean identities | De Morgan, double negation, idempotence, absorption, XOR inverse |
+| Boolean algebra axioms | Commutativity, associativity, distributivity, identity, complement, annihilator — all verified exhaustively over every input assignment |
+| Word-level Boolean ops | `word_not`/`word_and`/`word_or`/`word_xor` bitwise results, word De Morgan; `and_all`/`or_all`/`xor_all` parity, `is_zero` = ¬`or_all` |
 | Adders | All 4 `half_adder` combinations with `true`/`false` strings; all 4 with `0`/`1` bit digits; 4 mixed inputs; all 8 `full_adder` combinations; `full_adder` string inputs |
 | Multi-bit adders | `ripple_add4` exact bit patterns + decoded sums over 30 input pairs + carry-in; `ripple_add8` low→high nibble carry propagation, 8-bit overflow, carry-in |
 | Subtractors | `flip_bit` truth table; `ripple_sub4` / `ripple_sub8` signed two's-complement results (positive and negative) and borrow-flag (carry-out) semantics |
@@ -484,6 +509,10 @@ Coverage summary:
 true  false  is_true  is_false
 nand  not  and  or  nor  ne  eq  or_nand
 if_then  then_if  if_and_only_if
+
+# Word-level Boolean algebra (LSB-first bit strings)
+bool_to_bit  word_zip  word_not  word_and  word_or  word_xor
+and_all  or_all  xor_all  is_zero
 
 # Adders, subtractors & comparators (LSB-first bit strings)
 half_adder  full_adder

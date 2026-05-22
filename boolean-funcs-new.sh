@@ -494,6 +494,85 @@ int_to_bits ()
 }
 
 
+# WORD-LEVEL BOOLEAN OPERATIONS
+# Lift the single-bit gates to whole bit-vectors (LSB-first strings), turning the
+# gate layer into a Boolean algebra over words. word_* take/return 0/1 strings;
+# the *_all reductions and is_zero return a single Boolean (true/false + exit
+# code), like the gates. bit_to_bool / bool_to_bit bridge the 0/1 bit convention
+# and the true/false the gates require.
+
+bool_to_bit ()
+{
+  # Boolean gate output (true/false) -> bit digit (1/0). Inverse of bit_to_bool.
+  case "$1" in true|t|T|True|1) echo 1 ;; *) echo 0 ;; esac
+}
+
+word_zip ()
+{
+  # word_zip GATE "A0 A1 .." "B0 B1 .."  ->  bitwise GATE applied position-wise.
+  # GATE is any two-input gate (and, or, ne, nand, ...). Widths should match.
+  local gate="$1"
+  local -a A B
+  read -ra A <<< "$2"
+  read -ra B <<< "$3"
+  local out="" i
+  for ((i=0; i<${#A[@]}; i++)); do
+    out+="$(bool_to_bit "$("$gate" "$(bit_to_bool "${A[i]}")" "$(bit_to_bool "${B[i]}")")") "
+  done
+  echo "${out% }"
+}
+
+word_not () { local -a A; read -ra A <<< "$1"; local out="" i
+              for ((i=0; i<${#A[@]}; i++)); do out+="$(flip_bit "${A[i]}") "; done
+              echo "${out% }"; }
+word_and () { word_zip and "$1" "$2"; }   # bitwise AND
+word_or  () { word_zip or  "$1" "$2"; }   # bitwise OR
+word_xor () { word_zip ne  "$1" "$2"; }   # bitwise XOR (ne)
+
+and_all ()
+{
+  # AND-reduce a word: true iff every bit is 1.
+  local -a A; read -ra A <<< "$1"
+  local acc=true i
+  for ((i=0; i<${#A[@]}; i++)); do acc=$(and "$acc" "$(bit_to_bool "${A[i]}")"); done
+  if [ "$acc" = true ]; then echo true; true; else echo false; false; fi
+}
+
+or_all ()
+{
+  # OR-reduce a word: true iff any bit is 1.
+  local -a A; read -ra A <<< "$1"
+  local acc=false i
+  for ((i=0; i<${#A[@]}; i++)); do acc=$(or "$acc" "$(bit_to_bool "${A[i]}")"); done
+  if [ "$acc" = true ]; then echo true; true; else echo false; false; fi
+}
+
+xor_all ()
+{
+  # XOR-reduce a word (parity): true iff an odd number of bits are 1.
+  local -a A; read -ra A <<< "$1"
+  local acc=false i
+  for ((i=0; i<${#A[@]}; i++)); do acc=$(ne "$acc" "$(bit_to_bool "${A[i]}")"); done
+  if [ "$acc" = true ]; then echo true; true; else echo false; false; fi
+}
+
+is_zero ()
+{
+  # true iff all bits are 0 — the complement of or_all. (ALU zero flag.)
+  if or_all "$1" >/dev/null; then echo false; false; else echo true; true; fi
+}
+
+# word-op testing (LSB-first):
+#word_not "1 0 1 1"               # -> 0 1 0 0
+#word_and "1 1 0 0" "1 0 1 0"     # -> 1 0 0 0
+#word_or  "1 1 0 0" "1 0 1 0"     # -> 1 1 1 0
+#word_xor "1 1 0 0" "1 0 1 0"     # -> 0 1 1 0
+#and_all  "1 1 1 1"               # -> true
+#or_all   "0 0 0 0"               # -> false
+#xor_all  "1 1 0 1"               # -> true   (odd parity)
+#is_zero  "0 0 0 0"               # -> true
+
+
 # EML OPERATOR
 # eml(x, y) = exp(x) - ln(y)
 # Introduced by Odrzywołek (2026). Functionally complete in continuous mathematics:

@@ -57,6 +57,23 @@ not(or(A,B))         → nor
 | `eq A B` | A↔B (XNOR) | inputs differ |
 | `if_then A B` | A→B | A true, B false |
 
+### A genuine Boolean algebra
+
+The gates aren't just a NAND demo — `(or, and, not, false, true)` form a true **Boolean algebra**, and the test suite verifies every axiom exhaustively over all input assignments: commutativity, associativity, distributivity (both ways), identity (`A∨0=A`, `A∧1=A`), complement (`A∨¬A=1`, `A∧¬A=0`), annihilator, plus absorption, idempotence, involution, and De Morgan.
+
+The algebra lifts to whole **bit-vectors** (LSB-first strings) with word-level ops and reductions:
+
+```bash
+word_not "1 0 1 1"               # "0 1 0 0"   (bitwise ¬)
+word_and "1 1 0 0" "1 0 1 0"     # "1 0 0 0"   (also word_or, word_xor)
+word_zip nand "1 1" "1 0"        # any gate, applied position-wise
+
+and_all "1 1 1 1"                # true   (∧-reduce: all bits set?)
+or_all  "0 0 1 0"                # true   (∨-reduce: any bit set?)
+xor_all "1 1 0 1"                # true   (parity: odd number of 1s)
+is_zero "0 0 0 0"                # true   (¬or_all — the ALU zero flag)
+```
+
 ### Adders, subtractors, and comparators
 
 `half_adder` and `full_adder` operate on `0`/`1` bit strings and accept either digit or `true`/`false` string inputs. They compose into multi-bit ripple-carry adders, two's-complement subtractors, and magnitude comparators. All multi-bit strings are **LSB-first** (bit 0 first).
@@ -172,10 +189,10 @@ sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 
 ```bash
 bash test-boolean-funcs.sh
-# 496 passed, 0 failed
+# 567 passed, 0 failed
 ```
 
-Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR inverse), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
+Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions, all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
 
 ## Attribution
 
@@ -189,6 +206,10 @@ Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR 
 true  false  is_true  is_false
 nand  not  and  or  nor  ne  eq  or_nand
 if_then  then_if  if_and_only_if
+
+# Word-level Boolean algebra (LSB-first bit strings)
+bool_to_bit  word_zip  word_not  word_and  word_or  word_xor
+and_all  or_all  xor_all  is_zero
 
 # Adders, subtractors & comparators (LSB-first bit strings)
 half_adder  full_adder

@@ -86,6 +86,44 @@ result=$(and true true); echo "$result"  # true
 if and true true; then echo "yes"; fi
 ```
 
+### Check the Boolean-algebra axioms by hand
+
+The suite proves these exhaustively, but they're satisfying to watch hold:
+
+```bash
+# Distributivity: A∧(B∨C) = (A∧B)∨(A∧C), over all 8 assignments
+for A in true false; do for B in true false; do for C in true false; do
+    lhs=$(and "$A" "$(or "$B" "$C")")
+    rhs=$(or "$(and "$A" "$B")" "$(and "$A" "$C")")
+    echo "A=$A B=$B C=$C: lhs=$lhs rhs=$rhs  $([ "$lhs" = "$rhs" ] && echo ok || echo BAD)"
+done; done; done
+
+# Complement and annihilator
+for A in true false; do
+    echo "A∨¬A = $(or "$A" "$(not "$A")")   A∧¬A = $(and "$A" "$(not "$A")")"
+    echo "A∨1  = $(or "$A" true)            A∧0  = $(and "$A" false)"
+done
+```
+
+### Word-level algebra and reductions
+
+```bash
+# Bitwise ops on 4-bit words (LSB-first)
+word_and "1 1 0 0" "1 0 1 0"     # 1 0 0 0
+word_or  "1 1 0 0" "1 0 1 0"     # 1 1 1 0
+word_xor "1 1 0 0" "1 0 1 0"     # 0 1 1 0
+word_zip nand "1 1 0 0" "1 0 1 0" # any gate, position-wise
+
+# De Morgan on whole words: ¬(A∧B) must equal ¬A ∨ ¬B
+A="1 1 0 0"; B="1 0 1 0"
+echo "¬(A∧B) = $(word_not "$(word_and "$A" "$B")")"
+echo "¬A∨¬B  = $(word_or "$(word_not "$A")" "$(word_not "$B")")"
+
+# Reductions fold a word to one bit
+xor_all "1 1 0 1"   # true  — parity (odd count of 1s)
+is_zero "0 0 0 0"   # true  — the ALU zero flag, = ¬or_all
+```
+
 ---
 
 ## Layer 1 — Adders

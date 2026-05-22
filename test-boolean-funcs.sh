@@ -260,6 +260,45 @@ for A in true false; do
     check_str "xor identity     A=$A"  "$A"  "$(ne "$A" false)"
 done
 
+# ── 3b. Boolean algebra axioms ────────────────────────────────────────────────
+# Together with the identities above (idempotence, absorption, involution, De
+# Morgan), these certify that (or=∨, and=∧, not=¬, false=0, true=1) is a genuine
+# Boolean algebra — every law verified exhaustively over all input assignments.
+section "Boolean algebra axioms: commutativity"
+for A in true false; do for B in true false; do
+    check_str "A∨B = B∨A  A=$A B=$B" "$(or  "$A" "$B")" "$(or  "$B" "$A")"
+    check_str "A∧B = B∧A  A=$A B=$B" "$(and "$A" "$B")" "$(and "$B" "$A")"
+done; done
+
+section "Boolean algebra axioms: associativity"
+for A in true false; do for B in true false; do for C in true false; do
+    check_str "(A∨B)∨C = A∨(B∨C)  $A$B$C" \
+        "$(or  "$(or  "$A" "$B")" "$C")" "$(or  "$A" "$(or  "$B" "$C")")"
+    check_str "(A∧B)∧C = A∧(B∧C)  $A$B$C" \
+        "$(and "$(and "$A" "$B")" "$C")" "$(and "$A" "$(and "$B" "$C")")"
+done; done; done
+
+section "Boolean algebra axioms: distributivity"
+for A in true false; do for B in true false; do for C in true false; do
+    check_str "A∧(B∨C) = (A∧B)∨(A∧C)  $A$B$C" \
+        "$(and "$A" "$(or "$B" "$C")")" "$(or  "$(and "$A" "$B")" "$(and "$A" "$C")")"
+    check_str "A∨(B∧C) = (A∨B)∧(A∨C)  $A$B$C" \
+        "$(or  "$A" "$(and "$B" "$C")")" "$(and "$(or  "$A" "$B")" "$(or  "$A" "$C")")"
+done; done; done
+
+section "Boolean algebra axioms: identity, complement, annihilator"
+for A in true false; do
+    # identity:    A∨0 = A,  A∧1 = A
+    check_str "A∨0 = A  A=$A" "$A" "$(or  "$A" false)"
+    check_str "A∧1 = A  A=$A" "$A" "$(and "$A" true)"
+    # complement:  A∨¬A = 1,  A∧¬A = 0
+    check_str "A∨¬A = 1  A=$A" true  "$(or  "$A" "$(not "$A")")"
+    check_str "A∧¬A = 0  A=$A" false "$(and "$A" "$(not "$A")")"
+    # annihilator: A∨1 = 1,  A∧0 = 0
+    check_str "A∨1 = 1  A=$A" true  "$(or  "$A" true)"
+    check_str "A∧0 = 0  A=$A" false "$(and "$A" false)"
+done
+
 # ── 4. Adders ─────────────────────────────────────────────────────────────────
 section "half_adder (true/false string inputs)"
 # A half adder adds two single bits with no carry-in.
@@ -437,6 +476,38 @@ check_str "int_to_bits 5     = 1 0 1" "1 0 1"  "$(int_to_bits 5)"
 check_str "int_to_bits 5 6 padded"    "1 0 1 0 0 0" "$(int_to_bits 5 6)"
 for n in 0 1 7 8 100 255 2047; do
     check_str "int_to_bits($n) round-trips" "$n" "$(bits_to_dec "$(int_to_bits "$n")")"
+done
+
+# ── 4e. Word-level Boolean operations ─────────────────────────────────────────
+# Bitwise ops lift the single-bit gates to whole bit-vectors; the reductions
+# fold a word down to one Boolean.
+section "word_not / word_and / word_or / word_xor (bitwise)"
+check_str "word_not 1011"            "0 1 0 0" "$(word_not "1 0 1 1")"
+check_str "word_and 1100 & 1010"     "1 0 0 0" "$(word_and "1 1 0 0" "1 0 1 0")"
+check_str "word_or  1100 | 1010"     "1 1 1 0" "$(word_or  "1 1 0 0" "1 0 1 0")"
+check_str "word_xor 1100 ^ 1010"     "0 1 1 0" "$(word_xor "1 1 0 0" "1 0 1 0")"
+# A xor A = 0; A or (not A) = all ones; both decoded for clarity.
+check_str "A xor A = 0"  "0" "$(bits_to_dec "$(word_xor "1 0 1 1" "1 0 1 1")")"
+check_str "A or ¬A = 15" "15" "$(bits_to_dec "$(word_or "1 0 1 1" "$(word_not "1 0 1 1")")")"
+# De Morgan at the word level: ¬(A∧B) = ¬A ∨ ¬B, across two 4-bit words.
+WA="1 1 0 0"; WB="1 0 1 0"
+check_str "word De Morgan ¬(A∧B)=¬A∨¬B" \
+    "$(word_not "$(word_and "$WA" "$WB")")" \
+    "$(word_or  "$(word_not "$WA")" "$(word_not "$WB")")"
+
+section "and_all / or_all / xor_all / is_zero (reductions)"
+check_exit "and_all 1111 = true"   0 and_all "1 1 1 1"
+check_exit "and_all 1101 = false"  1 and_all "1 1 0 1"
+check_exit "or_all  0010 = true"   0 or_all  "0 0 1 0"
+check_exit "or_all  0000 = false"  1 or_all  "0 0 0 0"
+check_exit "xor_all 1101 = true"   0 xor_all "1 1 0 1"   # three 1s -> odd parity
+check_exit "xor_all 1100 = false"  1 xor_all "1 1 0 0"   # two 1s   -> even parity
+check_exit "is_zero 0000 = true"   0 is_zero "0 0 0 0"
+check_exit "is_zero 0100 = false"  1 is_zero "0 1 0 0"
+# is_zero must be the exact complement of or_all across several words.
+for w in "0 0 0 0" "1 0 0 0" "0 0 0 1" "1 1 1 1"; do
+    if or_all "$w" >/dev/null; then exp_zero=false; else exp_zero=true; fi
+    check_str "is_zero = ¬or_all  [$w]" "$exp_zero" "$(is_zero "$w")"
 done
 
 # ── 5. EML operator ───────────────────────────────────────────────────────────
