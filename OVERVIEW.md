@@ -247,6 +247,38 @@ The `eml_neg` step is the only place bc arithmetic is used directly: the pure
 eml form would require `eml(ln 0, exp z)`, but `ln(0) = −∞` is not
 representable.
 
+### EML applications — iterative algorithms
+
+Once arithmetic exists, ordinary numerical algorithms can run *on top of the EML
+layer*, using only `eml_mul` / `eml_sub` / `eml_add` / `eml_div`. Three are
+included; all inherit the domain caveat that `eml_mul` needs its first argument
+> 1, so they operate on `x > 1`.
+
+| Function | What it does | Method |
+|---|---|---|
+| `eml_pow_int base n` | `base`ⁿ for integer n | `n` repeated `eml_mul`s |
+| `eml_recip x [iters] [y0]` | reciprocal `1/x`, no division | Newton iteration `y ← y·(2 − x·y)` |
+| `eml_sin_taylor x [terms]` | `sin x` | Maclaurin series via the above |
+
+**`eml_recip`** is the interesting one: although `eml_div` already gives `1/x`
+directly, Newton's iteration recovers the same value from *multiplication and
+subtraction alone*. It converges quadratically (correct digits roughly double
+each step). Two practical points fall out of the EML domain:
+
+- The seed must satisfy `0 < y0 < 1/x` (an underestimate), so the correction
+  factor `c = 2 − x·y` stays `> 1` for `eml_mul`. The default `y0 = 0.5` suits
+  `1 < x < 2`; larger `x` needs a smaller seed.
+- The loop **must stop at convergence**. Once `x·y` reaches 1, iterating again
+  rounds `c` just *below* 1 — outside `eml_mul`'s domain — so `eml_recip` breaks
+  the moment `x·y ≥ 1`.
+
+**`eml_sin_taylor`** sums `x − x³/3! + x⁵/5! − …`, taking powers from
+`eml_pow_int`, reciprocal factorials from `eml_div`, and accumulating with
+`eml_sub`/`eml_add`. It holds for `1 < x ≲ π/2`: above 1 keeps the powers in
+`eml_mul`'s domain, and not far past `π/2` keeps every partial sum positive
+(so `eml_sub`/`eml_add`, whose first argument must be `> 0`, stay valid). With
+6 terms it matches `bc`'s `sin` to roughly `10⁻⁸`.
+
 ---
 
 ## Layer 3 — Bootstrapped Math Library
@@ -411,7 +443,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 462 passed, 0 failed
+# 477 passed, 0 failed
 ```
 
 Coverage summary:
@@ -426,6 +458,7 @@ Coverage summary:
 | Subtractors | `flip_bit` truth table; `ripple_sub4` / `ripple_sub8` signed two's-complement results (positive and negative) and borrow-flag (carry-out) semantics |
 | Comparators | `bit_to_bool`; `bits_eq` / `bits_gt` predicate exit codes; `compare4` over the full 8×8 grid and `compare8` over a 6×6 grid vs shell `-lt`/`-gt`; cascaded-priority edge cases (8 vs 7) |
 | EML | Base constructions; exp/ln mutual inverses; all five arithmetic ops; mul/div round-trips |
+| EML applications | `eml_pow_int` powers; `eml_recip` Newton reciprocal vs `eml_div` (incl. larger x with custom seeds); `eml_sin_taylor` vs `bc` sin, with term-count convergence |
 | Math library | Key angles; Pythagorean identity `sin²+cos²=1`; odd/even symmetry; `cosh²−sinh²=1`; `tanh=sinh/cosh`; forward/inverse round-trips |
 | Edge cases — domain errors | `asin(±1)`, `acos(±1)`, `asec(±1)`, `acsc(±1)`, `atanh(±1)`, `csc(0)`, `cot(0)` — all produce empty output as expected |
 | Edge cases — floating-point | `tan(π/2)` and `sec(π/2)` produce a large-but-finite value (~10²⁰) rather than an error, because `cos(π/2)` has a bc residual of ~10⁻²⁰ |
@@ -453,6 +486,9 @@ lhead  ltail  first  second
 # EML operator
 eml  eml_exp  eml_e  eml_ln  eml_zero
 eml_sub  eml_neg  eml_add  eml_mul  eml_div
+
+# EML applications (iterative algorithms)
+eml_pow_int  eml_recip  eml_sin_taylor
 
 # Math library
 pi  sqrt  pow  log_base

@@ -106,6 +106,23 @@ eml_mul 3 4           # 12  (exp(ln x + ln y))
 eml_div 4             # 0.25 (exp(−ln z) = 1/z)
 ```
 
+### EML applications — iterative algorithms
+
+Higher-level numerical algorithms built on the EML arithmetic, using only those operations (no `bc` math in the algorithm itself). They inherit the EML domain caveats — chiefly that `eml_mul` needs its first argument > 1, so these operate on `x > 1`.
+
+```bash
+eml_pow_int 1.5 3     # 3.375   (integer power via repeated eml_mul)
+
+# Reciprocal 1/x by Newton's iteration y <- y*(2 - x*y) — no division at all.
+# Domain: x > 1, seed 0 < y0 < 1/x. Default y0=0.5 suits 1<x<2; pass a smaller
+# y0 for larger x. Converges quadratically; agrees with eml_div.
+eml_recip 1.5         # 0.6667
+eml_recip 10 9 0.05   # 0.1   (x, max_iters, y0)
+
+# sin(x) from its Maclaurin series x - x³/3! + x⁵/5! - …  (1 < x <~ π/2)
+eml_sin_taylor 1.5    # 0.99749…   (matches bc's sin to ~1e-8 with 6 terms)
+```
+
 ## Layer 3 — Math Library
 
 All functions call `bc -l` and are bootstrapped from its six primitives (`s`, `c`, `a`, `l`, `e`, `sqrt`), following [John D. Cook's bootstrapping article](https://www.johndcook.com/blog/2021/01/05/bootstrapping-math-library/).
@@ -149,10 +166,10 @@ sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 
 ```bash
 bash test-boolean-funcs.sh
-# 462 passed, 0 failed
+# 477 passed, 0 failed
 ```
 
-Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR inverse), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), EML mutual inverses, arithmetic round-trips, trig/inverse-trig/hyperbolic round-trips, domain error cases.
+Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR inverse), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
 
 ## Attribution
 
@@ -179,6 +196,9 @@ lhead  ltail  first  second
 # EML operator
 eml  eml_exp  eml_e  eml_ln  eml_zero
 eml_sub  eml_neg  eml_add  eml_mul  eml_div
+
+# EML applications (iterative algorithms)
+eml_pow_int  eml_recip  eml_sin_taylor
 
 # Math library
 pi  sqrt  pow  log_base

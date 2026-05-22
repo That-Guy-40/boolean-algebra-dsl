@@ -577,6 +577,78 @@ eml_div ()
 #eml_div 4                     # -> ~0.25
 
 
+# EML APPLICATIONS
+# Iterative numerical algorithms built on top of the EML arithmetic layer, using
+# only eml_mul / eml_sub / eml_add / eml_div in the algorithm itself. They
+# inherit the EML domain restrictions — most importantly that eml_mul needs its
+# first argument > 1 — which is why these operate on x > 1.
+
+eml_pow_int ()
+{
+  # base^n for integer n >= 1, via repeated eml_mul. Domain: base > 1.
+  local base="$1" n="$2" result="$1" i
+  for ((i=1; i<n; i++)); do result=$(eml_mul "$result" "$base"); done
+  echo "$result"
+}
+
+eml_recip ()
+{
+  # Reciprocal 1/x by Newton's iteration  y <- y*(2 - x*y), which finds the root
+  # of f(y) = 1/y - x using only eml_mul and eml_sub — no division. Converges
+  # quadratically. (eml_div computes 1/x directly; this shows the same value
+  # falls out of the multiplicative layer alone.)
+  #   Args:   x  [max_iterations=8]  [y0=0.5]
+  #   Domain: x > 1, and 0 < y0 < 1/x (an underestimate, so the correction
+  #           factor c = 2 - x*y stays > 1 for eml_mul). The default y0=0.5 suits
+  #           1 < x < 2; for larger x supply a smaller y0 (e.g. x=10 -> y0=0.05).
+  # The loop stops as soon as x*y reaches 1 — y has then converged to 1/x, and
+  # iterating further would round c just below 1, outside eml_mul's domain.
+  local x="$1" iters="${2:-8}" y="${3:-0.5}" i t c
+  for ((i=0; i<iters; i++)); do
+    t=$(eml_mul "$x" "$y")                        # x*y   (x > 1, so it goes first)
+    [ "$(echo "$t >= 1" | bc -l)" = 1 ] && break  # converged: stop before c <= 1
+    c=$(eml_sub 2 "$t")                           # 2 - x*y   (> 1)
+    y=$(eml_mul "$c" "$y")                         # y*(2 - x*y)
+  done
+  echo "$y"
+}
+
+eml_sin_taylor ()
+{
+  # sin(x) via its Maclaurin series  x - x^3/3! + x^5/5! - x^7/7! + ...
+  # Powers come from eml_pow_int, reciprocal factorials from eml_div, and the
+  # alternating accumulation from eml_sub / eml_add.
+  #   Args:   x  [terms=6]
+  #   Domain: 1 < x <~ pi/2. x > 1 keeps every power inside eml_mul's domain;
+  #           the upper bound keeps each partial sum positive for eml_sub/eml_add
+  #           (whose first argument must be > 0).
+  # Note: acc must be assigned on its own line. In a single `local x=… acc="$x"`
+  # statement the RHS "$x" can resolve against an outer x, not the new local.
+  local x="$1" terms="${2:-6}" k exp fact recip power term
+  local acc="$x"
+  for ((k=1; k<terms; k++)); do
+    exp=$((2*k + 1))
+    power=$(eml_pow_int "$x" "$exp")
+    fact=$(echo "f=1; for (i=2; i<=$exp; i++) f*=i; f" | bc)   # (2k+1)! integer
+    recip=$(eml_div "$fact")
+    term=$(eml_mul "$power" "$recip")        # x^(2k+1) / (2k+1)!  (power > 1 first)
+    if (( k % 2 == 1 )); then
+      acc=$(eml_sub "$acc" "$term")          # odd k: subtract
+    else
+      acc=$(eml_add "$acc" "$term")          # even k: add
+    fi
+  done
+  echo "$acc"
+}
+
+# EML applications testing:
+#eml_pow_int 1.5 3             # -> ~3.375
+#eml_recip 1.5                 # -> ~0.6667   (1/1.5)
+#eml_recip 10 9 0.05           # -> ~0.1      (1/10; smaller y0 for larger x)
+#eml_sin_taylor 1.5            # -> ~0.997    (sin 1.5)
+#eml_sin_taylor 1.5707963      # -> ~1.0      (sin pi/2)
+
+
 # BOOTSTRAPPED MATH LIBRARY
 # All functions use bc -l on the backend.
 # Reference: https://www.johndcook.com/blog/2021/01/05/bootstrapping-math-library/

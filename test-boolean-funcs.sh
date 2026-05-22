@@ -491,6 +491,35 @@ section "EML mul/div inverses"
 check_float "x * (1/x) = 1  [x=3]" 1 "$(eml_mul 3 "$(eml_div 3)")" "$T"
 check_float "x * (1/x) = 1  [x=7]" 1 "$(eml_mul 7 "$(eml_div 7)")" "$T"
 
+# ── 5b. EML applications (iterative algorithms on the EML layer) ───────────────
+# eml_pow_int: integer powers via repeated eml_mul.
+# eml_recip:   Newton's reciprocal iteration y <- y*(2 - x*y), no division.
+# eml_sin_taylor: Maclaurin series for sin via eml powers + accumulation.
+
+section "eml_pow_int (integer powers via repeated eml_mul)"
+check_float "1.5^1 = 1.5"   1.5    "$(eml_pow_int 1.5 1)"  "$T"
+check_float "1.5^2 = 2.25"  2.25   "$(eml_pow_int 1.5 2)"  "$T"
+check_float "1.5^3 = 3.375" 3.375  "$(eml_pow_int 1.5 3)"  "$T"
+check_float "2^5   = 32"    32     "$(eml_pow_int 2 5)"    0.0000001
+check_float "3^4   = 81"    81     "$(eml_pow_int 3 4)"    0.0000001
+
+section "eml_recip (Newton 1/x) agrees with eml_div"
+# The iterative reciprocal must converge to the same value as the direct eml_div.
+check_float "recip(1.5)  = 1/1.5"  "$(eml_div 1.5)"  "$(eml_recip 1.5)"           0.000000001
+check_float "recip(1.25) = 1/1.25" "$(eml_div 1.25)" "$(eml_recip 1.25)"          0.000000001
+check_float "recip(1.9)  = 1/1.9"  "$(eml_div 1.9)"  "$(eml_recip 1.9 7)"         0.000000001
+check_float "recip(4)    = 0.25"   0.25   "$(eml_recip 4 8 0.2)"                   0.000000001
+check_float "recip(10)   = 0.1"    0.1    "$(eml_recip 10 9 0.05)"                 0.000000001
+check_float "recip(100)  = 0.01"   0.01   "$(eml_recip 100 12 0.005)"             0.0000001
+
+section "eml_sin_taylor agrees with bc sin (1 < x <~ pi/2)"
+# Taylor truncation error grows with x and shrinks with more terms; tolerances
+# are loosened accordingly but stay far tighter than any structural error.
+check_float "sin_taylor(1.2)  ~ sin(1.2)"  "$(echo "s(1.2)" | bc -l)" "$(eml_sin_taylor 1.2)"        0.000001
+check_float "sin_taylor(1.5)  ~ sin(1.5)"  "$(echo "s(1.5)" | bc -l)" "$(eml_sin_taylor 1.5)"        0.000001
+check_float "sin_taylor(pi/2) ~ 1"         1                          "$(eml_sin_taylor "$HALF_PI")" 0.00001
+check_float "sin_taylor(1.4, 8 terms)"     "$(echo "s(1.4)" | bc -l)" "$(eml_sin_taylor 1.4 8)"      0.0000001
+
 # ── 6. Math library — constants & roots ───────────────────────────────────────
 section "pi, sqrt, pow, log_base"
 

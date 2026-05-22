@@ -406,6 +406,80 @@ eml_mul 0.5 4      # will fail/error: ln(0.5) < 0
 eml_mul 1.001 1000 # just inside domain — observe precision
 ```
 
+### EML application — integer powers (`eml_pow_int`)
+
+`eml_pow_int base n` is just `n` repeated `eml_mul`s. Because `eml_mul` needs its
+first argument > 1, the base must be > 1:
+
+```bash
+eml_pow_int 1.5 3     # 3.375
+eml_pow_int 2 8       # 256
+eml_pow_int 0.5 3     # fails — 0.5 is below eml_mul's domain
+```
+
+### EML application — reciprocal by Newton's iteration (`eml_recip`)
+
+`eml_recip` computes `1/x` with only `eml_mul` and `eml_sub` — no division at
+all. Unroll the loop to watch it converge **quadratically** (the number of
+correct digits roughly doubles each step):
+
+```bash
+x=1.5; y=0.5                       # y0 = 0.5 is an underestimate of 1/1.5
+for i in 1 2 3 4 5 6; do
+    t=$(eml_mul "$x" "$y")         # x*y
+    c=$(eml_sub 2 "$t")            # 2 - x*y
+    y=$(eml_mul "$c" "$y")         # y*(2 - x*y)
+    echo "iter $i: y = $y"
+done
+echo "target eml_div(1.5) = $(eml_div 1.5)"
+```
+
+Expected: `y` leaps toward `0.6666…`, locking in digits faster each iteration.
+
+### EML application — the Newton basin needs a small enough seed
+
+Convergence requires `0 < y0 < 1/x`. The default `y0 = 0.5` only sits in the
+basin for `1 < x < 2`; for larger `x` you must hand it a smaller underestimate:
+
+```bash
+eml_recip 10           # default y0=0.5 is outside the basin -> garbage
+eml_recip 10 9 0.05    # y0 = 0.05 < 1/10 -> converges to 0.1
+eml_recip 100 12 0.005 # 1/100 = 0.01
+
+# cross-check against the direct reciprocal
+for x in 1.2 1.5 1.9; do
+    echo "1/$x: newton=$(eml_recip $x)  eml_div=$(eml_div $x)"
+done
+```
+
+### EML application — sin by Taylor series, accuracy vs. term count
+
+`eml_sin_taylor` sums `x - x³/3! + x⁵/5! - …` using `eml_pow_int` for the powers,
+`eml_div` for the reciprocal factorials, and `eml_sub`/`eml_add` to accumulate.
+More terms tighten the estimate toward the true sine:
+
+```bash
+x=1.5
+for n in 2 3 4 5 6; do
+    printf "%d terms: %s\n" "$n" "$(eml_sin_taylor $x $n)"
+done
+echo "target bc sin(1.5) = $(echo "s(1.5)" | bc -l)"
+```
+
+Expected: each added term roughly an order of magnitude closer to `0.99749…`.
+
+### EML application — the Taylor domain wall
+
+The series needs `x > 1` (so every power stays inside `eml_mul`'s domain) and
+`x` not much past `π/2` (so each running partial sum stays positive for
+`eml_sub`/`eml_add`, whose first argument must be > 0):
+
+```bash
+eml_sin_taylor 1.5     # fine (partial sums stay positive)
+eml_sin_taylor 3       # breaks: x - x³/6 = 3 - 4.5 < 0, and the next eml_add
+                       # then sees a negative first argument
+```
+
 ---
 
 ## Layer 3 — Math Library
@@ -506,8 +580,15 @@ above, and automated coverage in `test-boolean-funcs.sh`:
   `flip_bit`) and feed `Cin=1` to perform two's-complement subtraction.
 - **Comparator** — `bits_eq` (XNOR of all bit-pairs, ANDed) and `bits_gt`
   (cascaded priority from the MSB); `compare4` / `compare8` echo `lt`/`eq`/`gt`.
+- **EML reciprocal iteration** — `eml_recip` computes `1/x` by Newton's method
+  (`y <- y*(2 - x*y)`) using only `eml_mul` and `eml_sub`; see the EML-application
+  snippets under [Layer 2](#layer-2--eml-operator).
+- **Taylor series via EML** — `eml_sin_taylor` approximates `sin(x)` from its
+  Maclaurin series using `eml_pow_int`, `eml_div`, and `eml_sub`/`eml_add`.
 
 ## Ideas for Further Extension
 
-- **EML reciprocal iteration**: Newton's method for `1/x` using only EML operations.
-- **Taylor series via EML**: approximate `sin(x) ≈ x - x³/6 + x⁵/120` using `eml_mul` for powers and `eml_sub`/`eml_add` for accumulation.
+- **Comparator-driven `eml_recip` seeding**: pick the Newton seed `y0`
+  automatically from the magnitude of `x` instead of passing it by hand.
+- **Hyperbolic / cos Taylor series**: reuse `eml_pow_int` and the accumulation
+  pattern for `cos(x)` (even powers) and `sinh`/`cosh`.
