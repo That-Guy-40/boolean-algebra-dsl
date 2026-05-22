@@ -562,6 +562,23 @@ is_zero ()
   if or_all "$1" >/dev/null; then echo false; false; else echo true; true; fi
 }
 
+# Complement reductions — the negations of the three above.
+nand_all () { if and_all "$1" >/dev/null; then echo false; false; else echo true; true; fi; }  # not all set
+nor_all  () { if or_all  "$1" >/dev/null; then echo false; false; else echo true; true; fi; }  # no bits set (= is_zero)
+xnor_all () { if xor_all "$1" >/dev/null; then echo false; false; else echo true; true; fi; }  # even parity (incl. zero)
+
+# Readable quantifier aliases. (or_all already means "any bit set", so "any" is
+# just a friendlier name for it — there is no separate single-word or_any.)
+all  () { and_all "$1"; }   # ∀ bits set
+any  () { or_all  "$1"; }   # ∃ a set bit
+none () { nor_all "$1"; }   # no set bits
+
+# Two-word "any-position" predicates: ∃ a bit position where (A op B) holds.
+# Each reduces a position-wise word op with or_all, so widths should match.
+and_any () { if or_all "$(word_and "$1" "$2")" >/dev/null; then echo true; true; else echo false; false; fi; }  # masks overlap
+or_any  () { if or_all "$(word_or  "$1" "$2")" >/dev/null; then echo true; true; else echo false; false; fi; }  # any bit set in either
+xor_any () { if or_all "$(word_xor "$1" "$2")" >/dev/null; then echo true; true; else echo false; false; fi; }  # differ anywhere (= ¬bits_eq)
+
 # word-op testing (LSB-first):
 #word_not "1 0 1 1"               # -> 0 1 0 0
 #word_and "1 1 0 0" "1 0 1 0"     # -> 1 0 0 0
@@ -571,6 +588,11 @@ is_zero ()
 #or_all   "0 0 0 0"               # -> false
 #xor_all  "1 1 0 1"               # -> true   (odd parity)
 #is_zero  "0 0 0 0"               # -> true
+#nand_all "1 1 0 1"               # -> true   (not all set)
+#xnor_all "1 1 0 0"               # -> true   (even parity)
+#any "0 0 1 0"                    # -> true   (alias for or_all)
+#and_any "1 1 0 0" "1 0 1 0"      # -> true   (3 and 5 share bit 0)
+#xor_any "1 0 1 0" "1 0 1 0"      # -> false  (5 == 5, differ nowhere)
 
 
 # WORD HELPERS AND PREDICATES

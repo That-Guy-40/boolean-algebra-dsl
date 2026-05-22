@@ -122,6 +122,17 @@ echo "¬A∨¬B  = $(word_or "$(word_not "$A")" "$(word_not "$B")")"
 # Reductions fold a word to one bit
 xor_all "1 1 0 1"   # true  — parity (odd count of 1s)
 is_zero "0 0 0 0"   # true  — the ALU zero flag, = ¬or_all
+
+# Complements + readable aliases
+nand_all "1 1 0 1"  # true  — not all set
+xnor_all "1 1 0 0"  # true  — even parity
+all "1 1 1 1"; any "0 0 1 0"; none "0 0 0 0"   # = and_all / or_all / is_zero
+
+# Two-word "any-position" predicates — handy as bitmask tests
+PERMS="1 0 1 0"     # some permission/flag mask (bits 0 and 2 set)
+and_any "$PERMS" "1 0 0 0"   # true  — does it grant bit 0?
+and_any "$PERMS" "0 1 0 0"   # false — bit 1 not granted
+xor_any "$PERMS" "$PERMS"    # false — identical to itself (≡ ¬bits_eq)
 ```
 
 ### Word helpers and predicates

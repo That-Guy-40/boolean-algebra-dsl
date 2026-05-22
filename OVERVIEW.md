@@ -113,10 +113,20 @@ Boolean: `and_all`, `or_all`, `xor_all` (parity), and `is_zero` (`= ¬or_all`,
 the ALU's zero flag). `bit_to_bool` / `bool_to_bit` bridge the `0`/`1` bit
 convention and the `true`/`false` the gates speak.
 
+The reduction family is rounded out by the **complements** `nand_all` / `nor_all`
+/ `xnor_all` (the last being even parity), readable **aliases** `all` / `any` /
+`none`, and the **two-word existential predicates** `and_any` / `or_any` /
+`xor_any` — "is there any bit position where `A op B` holds?". These are handy
+mask tests: `and_any` is bitmask overlap, and `xor_any` is exactly `¬bits_eq`
+(the words differ somewhere).
+
 ```bash
 word_and "1 1 0 0" "1 0 1 0"   # 1 0 0 0
 xor_all  "1 1 0 1"             # true  (odd parity)
+xnor_all "1 1 0 0"            # true  (even parity)
 is_zero  "0 0 0 0"             # true
+and_any  "1 1 0 0" "1 0 1 0"   # true  (masks share bit 0)
+xor_any  "1 0 1 0" "1 0 1 0"   # false (identical → differ nowhere)
 ```
 
 ### Word helpers and predicates
@@ -534,7 +544,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 696 passed, 0 failed
+# 776 passed, 0 failed
 ```
 
 Coverage summary:
@@ -546,6 +556,7 @@ Coverage summary:
 | Boolean identities | De Morgan, double negation, idempotence, absorption, XOR inverse |
 | Boolean algebra axioms | Commutativity, associativity, distributivity, identity, complement, annihilator — all verified exhaustively over every input assignment |
 | Word-level Boolean ops | `word_not`/`word_and`/`word_or`/`word_xor` bitwise results, word De Morgan; `and_all`/`or_all`/`xor_all` parity, `is_zero` = ¬`or_all` |
+| Complement & any reducers | `nand_all`/`nor_all`/`xnor_all` as exact negations of their bases (over all 4-bit words); `nor_all` = `is_zero`; `all`/`any`/`none` aliases; two-word `and_any`/`or_any`/`xor_any` cross-checked vs `bits_eq` and `is_zero` |
 | Word helpers & predicates | `inc`/`dec`/`negate` wrap and inverses (`a + (−a) = 0`); `is_one`/`is_even`/`is_odd`/`is_negative` exhaustively; `parity = popcount mod 2`, `lsb`/`msb`, `bits_to_int` decode over all 4-bit values |
 | Shifts & ALU | `shl`/`shr` width-preserving shifts; `alu4` over every opcode plus Z/C/N/V flag cases (signed overflow on 3+5, no-borrow carry on 5−3, zero+carry+overflow on 8+8) and unknown-opcode rejection |
 | Adders | All 4 `half_adder` combinations with `true`/`false` strings; all 4 with `0`/`1` bit digits; 4 mixed inputs; all 8 `full_adder` combinations; `full_adder` string inputs |
@@ -573,6 +584,8 @@ if_then  then_if  if_and_only_if
 # Word-level Boolean algebra (LSB-first bit strings)
 bool_to_bit  word_zip  word_not  word_and  word_or  word_xor
 and_all  or_all  xor_all  is_zero
+nand_all  nor_all  xnor_all  all  any  none
+and_any  or_any  xor_any
 
 # Word helpers & predicates
 inc  dec  negate  bits_to_int

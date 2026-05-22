@@ -510,6 +510,54 @@ for w in "0 0 0 0" "1 0 0 0" "0 0 0 1" "1 1 1 1"; do
     check_str "is_zero = ¬or_all  [$w]" "$exp_zero" "$(is_zero "$w")"
 done
 
+section "complement reductions: nand_all / nor_all / xnor_all"
+check_exit "nand_all 1111 = false" 1 nand_all "1 1 1 1"   # all set -> not(all) is false
+check_exit "nand_all 1101 = true"  0 nand_all "1 1 0 1"
+check_exit "nor_all  0000 = true"  0 nor_all  "0 0 0 0"
+check_exit "nor_all  0010 = false" 1 nor_all  "0 0 1 0"
+check_exit "xnor_all 1100 = true"  0 xnor_all "1 1 0 0"   # two 1s  -> even parity
+check_exit "xnor_all 1110 = false" 1 xnor_all "1 1 1 0"   # three   -> odd parity
+check_exit "xnor_all 0000 = true"  0 xnor_all "0 0 0 0"   # zero    -> even
+# Each complement must be the exact negation of its base over all 4-bit words.
+for n in $(seq 0 15); do
+    w=$(dec_to_bits $n 4)
+    check_str "nand_all = ¬and_all [$n]" "$(and_all "$w" >/dev/null && echo false || echo true)" "$(nand_all "$w")"
+    check_str "nor_all  = ¬or_all  [$n]" "$(or_all  "$w" >/dev/null && echo false || echo true)" "$(nor_all  "$w")"
+    check_str "xnor_all = ¬xor_all [$n]" "$(xor_all "$w" >/dev/null && echo false || echo true)" "$(xnor_all "$w")"
+done
+# nor_all is exactly is_zero.
+for n in 0 1 8 15; do
+    w=$(dec_to_bits $n 4)
+    check_str "nor_all = is_zero [$n]" "$(is_zero "$w")" "$(nor_all "$w")"
+done
+
+section "quantifier aliases: all / any / none"
+check_str "all  = and_all [1111]" "$(and_all "1 1 1 1")" "$(all  "1 1 1 1")"
+check_str "any  = or_all  [0010]" "$(or_all  "0 0 1 0")" "$(any  "0 0 1 0")"
+check_str "none = is_zero [0000]" "$(is_zero "0 0 0 0")" "$(none "0 0 0 0")"
+check_exit "any 0000 = false" 1 any  "0 0 0 0"
+check_exit "none 0000 = true" 0 none "0 0 0 0"
+
+section "two-word any-position predicates: and_any / or_any / xor_any"
+# and_any: do the masks share a set bit?
+check_exit "and_any 3,5 overlap (bit0)"  0 and_any "1 1 0 0" "1 0 1 0"
+check_exit "and_any 1,2 disjoint"        1 and_any "1 0 0 0" "0 1 0 0"
+# or_any: any bit set across either word?
+check_exit "or_any 0,2 = true"           0 or_any  "0 0 0 0" "0 1 0 0"
+check_exit "or_any 0,0 = false"          1 or_any  "0 0 0 0" "0 0 0 0"
+# xor_any: do the words differ anywhere? Must equal ¬bits_eq across pairs.
+check_exit "xor_any 5,3 differ"          0 xor_any "1 0 1 0" "1 1 0 0"
+check_exit "xor_any 5,5 same"            1 xor_any "1 0 1 0" "1 0 1 0"
+for pair in "5 5" "5 3" "0 0" "15 0" "9 1"; do
+    set -- $pair; A=$(dec_to_bits $1 4); B=$(dec_to_bits $2 4)
+    # xor_any == NOT bits_eq
+    eq_neg=$(bits_eq "$A" "$B" >/dev/null && echo false || echo true)
+    check_str "xor_any = ¬bits_eq [$1,$2]" "$eq_neg" "$(xor_any "$A" "$B")"
+    # and_any == NOT is_zero(A AND B)
+    overlap=$(is_zero "$(word_and "$A" "$B")" >/dev/null && echo false || echo true)
+    check_str "and_any = ¬is_zero(A&B) [$1,$2]" "$overlap" "$(and_any "$A" "$B")"
+done
+
 # ── 4e-ii. Word helpers and predicates ────────────────────────────────────────
 section "inc / dec / negate (width-preserving two's complement)"
 # Results wrap mod 16; checked by decoding with bits_to_int.

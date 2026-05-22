@@ -72,6 +72,17 @@ and_all "1 1 1 1"                # true   (∧-reduce: all bits set?)
 or_all  "0 0 1 0"                # true   (∨-reduce: any bit set?)
 xor_all "1 1 0 1"                # true   (parity: odd number of 1s)
 is_zero "0 0 0 0"                # true   (¬or_all — the ALU zero flag)
+
+# complement reductions + readable aliases
+nand_all "1 1 0 1"               # true   (not all set)
+nor_all  "0 0 0 0"               # true   (no bits set, = is_zero)
+xnor_all "1 1 0 0"               # true   (even parity)
+all "1 1 1 1";  any "0 0 1 0";  none "0 0 0 0"   # = and_all / or_all / is_zero
+
+# two-word "any-position" predicates: ∃ a bit where A op B holds
+and_any "1 1 0 0" "1 0 1 0"      # true   (masks overlap — share a set bit)
+or_any  "0 0 0 0" "0 1 0 0"      # true   (any bit set in either)
+xor_any "1 0 1 0" "1 1 0 0"      # true   (differ somewhere; = ¬bits_eq)
 ```
 
 ### Word helpers and predicates
@@ -225,10 +236,10 @@ sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 
 ```bash
 bash test-boolean-funcs.sh
-# 696 passed, 0 failed
+# 776 passed, 0 failed
 ```
 
-Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions, word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts, the `alu4` ALU (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
+Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions (incl. complement reductions `nand_all`/`nor_all`/`xnor_all` as exact negations, `all`/`any`/`none` aliases, and two-word `and_any`/`or_any`/`xor_any` cross-checked against `bits_eq` and `is_zero`), word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts, the `alu4` ALU (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
 
 ## Attribution
 
@@ -246,6 +257,8 @@ if_then  then_if  if_and_only_if
 # Word-level Boolean algebra (LSB-first bit strings)
 bool_to_bit  word_zip  word_not  word_and  word_or  word_xor
 and_all  or_all  xor_all  is_zero
+nand_all  nor_all  xnor_all  all  any  none
+and_any  or_any  xor_any
 
 # Word helpers & predicates
 inc  dec  negate  bits_to_int
