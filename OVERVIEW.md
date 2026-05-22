@@ -258,6 +258,7 @@ included; all inherit the domain caveat that `eml_mul` needs its first argument
 |---|---|---|
 | `eml_pow_int base n` | `base`ⁿ for integer n | `n` repeated `eml_mul`s |
 | `eml_recip x [iters] [y0]` | reciprocal `1/x`, no division | Newton iteration `y ← y·(2 − x·y)` |
+| `eml_recip_auto x [iters]` | `1/x` with the seed chosen for you | brackets `x` with the bit comparator, then `eml_recip` |
 | `eml_sin_taylor x [terms]` | `sin x` | Maclaurin series via the above |
 
 **`eml_recip`** is the interesting one: although `eml_div` already gives `1/x`
@@ -271,6 +272,15 @@ each step). Two practical points fall out of the EML domain:
 - The loop **must stop at convergence**. Once `x·y` reaches 1, iterating again
   rounds `c` just *below* 1 — outside `eml_mul`'s domain — so `eml_recip` breaks
   the moment `x·y ≥ 1`.
+
+**`eml_recip_auto`** removes the manual seed, and in doing so closes the loop
+back to Layer 1. To find a valid `y0` it needs an underestimate of `1/x`; since
+`2^(k−1) ≤ floor(x) ≤ x < 2^k`, the value `2^−k` always works. It finds that `k`
+— the bit-length of `floor(x)` — by asking the bit comparator "is `2^k > floor(x)`?"
+for `k = 0, 1, 2, …`, encoding both numbers with `int_to_bits` and comparing with
+`bits_gt`. So the Boolean comparator from the bottom layer chooses the starting
+point for the continuous Newton iteration at the top — one function spanning the
+whole stack. (Domain `1 < x < 2^12`, the comparator width used.)
 
 **`eml_sin_taylor`** sums `x − x³/3! + x⁵/5! − …`, taking powers from
 `eml_pow_int`, reciprocal factorials from `eml_div`, and accumulating with
@@ -443,7 +453,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 477 passed, 0 failed
+# 496 passed, 0 failed
 ```
 
 Coverage summary:
@@ -458,7 +468,8 @@ Coverage summary:
 | Subtractors | `flip_bit` truth table; `ripple_sub4` / `ripple_sub8` signed two's-complement results (positive and negative) and borrow-flag (carry-out) semantics |
 | Comparators | `bit_to_bool`; `bits_eq` / `bits_gt` predicate exit codes; `compare4` over the full 8×8 grid and `compare8` over a 6×6 grid vs shell `-lt`/`-gt`; cascaded-priority edge cases (8 vs 7) |
 | EML | Base constructions; exp/ln mutual inverses; all five arithmetic ops; mul/div round-trips |
-| EML applications | `eml_pow_int` powers; `eml_recip` Newton reciprocal vs `eml_div` (incl. larger x with custom seeds); `eml_sin_taylor` vs `bc` sin, with term-count convergence |
+| EML applications | `eml_pow_int` powers; `eml_recip` Newton reciprocal vs `eml_div` (incl. larger x with custom seeds); `eml_recip_auto` comparator-seeded reciprocal across power-of-two brackets; `eml_sin_taylor` vs `bc` sin, with term-count convergence |
+| Bit conversion | `int_to_bits` minimal and fixed-width output, round-trips via `bits_to_dec` |
 | Math library | Key angles; Pythagorean identity `sin²+cos²=1`; odd/even symmetry; `cosh²−sinh²=1`; `tanh=sinh/cosh`; forward/inverse round-trips |
 | Edge cases — domain errors | `asin(±1)`, `acos(±1)`, `asec(±1)`, `acsc(±1)`, `atanh(±1)`, `csc(0)`, `cot(0)` — all produce empty output as expected |
 | Edge cases — floating-point | `tan(π/2)` and `sec(π/2)` produce a large-but-finite value (~10²⁰) rather than an error, because `cos(π/2)` has a bc residual of ~10⁻²⁰ |
@@ -479,6 +490,7 @@ half_adder  full_adder
 ripple_add4  ripple_add8
 flip_bit  ripple_sub4  ripple_sub8
 bit_to_bool  bits_eq  bits_gt  compare4  compare8
+int_to_bits
 
 # List accessors
 lhead  ltail  first  second
@@ -488,7 +500,7 @@ eml  eml_exp  eml_e  eml_ln  eml_zero
 eml_sub  eml_neg  eml_add  eml_mul  eml_div
 
 # EML applications (iterative algorithms)
-eml_pow_int  eml_recip  eml_sin_taylor
+eml_pow_int  eml_recip  eml_recip_auto  eml_sin_taylor
 
 # Math library
 pi  sqrt  pow  log_base

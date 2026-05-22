@@ -475,6 +475,24 @@ compare8 ()
 #bits_gt  "1 0 1 0" "1 1 0 0"   # true  (5 > 3)
 #bits_eq  "1 0 1 0" "1 0 1 0"   # true  (5 == 5)
 
+int_to_bits ()
+{
+  # Non-negative integer -> LSB-first bit string (the counterpart to the bit
+  # decoding the adders/comparators consume). With an optional fixed width it
+  # pads (or truncates) to that many bits; otherwise it uses the minimal width.
+  #   int_to_bits 5      -> "1 0 1"
+  #   int_to_bits 5 6    -> "1 0 1 0 0 0"
+  local n="$1" width="${2:-0}" out="" i
+  if [ "$width" -gt 0 ]; then
+    for ((i=0; i<width; i++)); do out+="$(( (n >> i) & 1 )) "; done
+  elif [ "$n" -le 0 ]; then
+    echo 0; return
+  else
+    while [ "$n" -gt 0 ]; do out+="$(( n & 1 )) "; n=$(( n >> 1 )); done
+  fi
+  echo "${out% }"
+}
+
 
 # EML OPERATOR
 # eml(x, y) = exp(x) - ln(y)
@@ -641,12 +659,40 @@ eml_sin_taylor ()
   echo "$acc"
 }
 
+eml_recip_auto ()
+{
+  # 1/x with the Newton seed chosen automatically — no hand-supplied y0.
+  # Cross-layer demo: the Layer-1 bit comparator brackets x's magnitude, then
+  # that bracket seeds the Layer-2 Newton reciprocal.
+  #
+  # Pick k = bit-length of floor(x): the smallest k with 2^k > floor(x), found
+  # by asking the comparator "is 2^k > floor(x)?" for k = 0,1,2,... Because
+  # 2^(k-1) <= floor(x) <= x < 2^k, the seed y0 = 2^-k satisfies 0 < y0 < 1/x,
+  # which is exactly the underestimate eml_recip needs.
+  #   Args:   x  [max_iterations=12]
+  #   Domain: 1 < x < 2^W (W=12 here, so x up to ~2047 — floor(x) and 2^k must
+  #           fit in W bits for the comparator).
+  local x="$1" iters="${2:-12}" W=12
+  local m="${x%%.*}"                       # floor(x); x > 1 so m >= 1
+  case "$m" in ''|*[!0-9]*) m=1 ;; esac    # guard against a bare ".5" etc.
+  local mbits k=0
+  mbits=$(int_to_bits "$m" "$W")
+  # bits_gt echoes true/false as well as setting the exit code; here we only
+  # want the exit code, so discard the echoed string.
+  while ! bits_gt "$(int_to_bits $((1 << k)) "$W")" "$mbits" >/dev/null; do
+    k=$((k + 1))
+  done
+  eml_recip "$x" "$iters" "$(echo "scale=40; 1/(2^$k)" | bc -l)"
+}
+
 # EML applications testing:
 #eml_pow_int 1.5 3             # -> ~3.375
 #eml_recip 1.5                 # -> ~0.6667   (1/1.5)
 #eml_recip 10 9 0.05           # -> ~0.1      (1/10; smaller y0 for larger x)
 #eml_sin_taylor 1.5            # -> ~0.997    (sin 1.5)
 #eml_sin_taylor 1.5707963      # -> ~1.0      (sin pi/2)
+#eml_recip_auto 10             # -> ~0.1      (seed picked automatically)
+#eml_recip_auto 100            # -> ~0.01
 
 
 # BOOTSTRAPPED MATH LIBRARY

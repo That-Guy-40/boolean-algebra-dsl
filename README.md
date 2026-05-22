@@ -119,6 +119,12 @@ eml_pow_int 1.5 3     # 3.375   (integer power via repeated eml_mul)
 eml_recip 1.5         # 0.6667
 eml_recip 10 9 0.05   # 0.1   (x, max_iters, y0)
 
+# Same reciprocal, but the seed is chosen automatically: the Layer-1 bit
+# comparator brackets x's magnitude (smallest k with 2^k > floor(x)) and seeds
+# Newton with 2^-k. No hand-tuned y0 — a genuine Layer-1 → Layer-2 composition.
+eml_recip_auto 10     # 0.1
+eml_recip_auto 1000   # 0.001
+
 # sin(x) from its Maclaurin series x - x³/3! + x⁵/5! - …  (1 < x <~ π/2)
 eml_sin_taylor 1.5    # 0.99749…   (matches bc's sin to ~1e-8 with 6 terms)
 ```
@@ -166,10 +172,10 @@ sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 
 ```bash
 bash test-boolean-funcs.sh
-# 477 passed, 0 failed
+# 496 passed, 0 failed
 ```
 
-Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR inverse), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
+Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR inverse), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
 
 ## Attribution
 
@@ -189,6 +195,7 @@ half_adder  full_adder
 ripple_add4  ripple_add8
 flip_bit  ripple_sub4  ripple_sub8
 bit_to_bool  bits_eq  bits_gt  compare4  compare8
+int_to_bits
 
 # List accessors
 lhead  ltail  first  second
@@ -198,7 +205,7 @@ eml  eml_exp  eml_e  eml_ln  eml_zero
 eml_sub  eml_neg  eml_add  eml_mul  eml_div
 
 # EML applications (iterative algorithms)
-eml_pow_int  eml_recip  eml_sin_taylor
+eml_pow_int  eml_recip  eml_recip_auto  eml_sin_taylor
 
 # Math library
 pi  sqrt  pow  log_base

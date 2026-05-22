@@ -452,6 +452,33 @@ for x in 1.2 1.5 1.9; do
 done
 ```
 
+### EML application — automatic seeding (`eml_recip_auto`, comparator-driven)
+
+`eml_recip_auto` removes the hand-tuned seed entirely. It uses the Layer-1 bit
+comparator to find which power-of-two bracket `floor(x)` falls in — the smallest
+`k` with `2ᵏ > floor(x)` — and seeds Newton with `y0 = 2⁻ᵏ`, which is always a
+valid underestimate of `1/x`. One function, spanning both layers:
+
+```bash
+for x in 1.5 4 10 63 64 100 1000; do
+    echo "1/$x: auto=$(eml_recip_auto $x)  eml_div=$(eml_div $x)"
+done
+```
+
+Expected: every `auto` value matches `eml_div`, with no seed supplied by hand.
+The `63` vs `64` pair is worth eyeballing — they land in adjacent brackets
+(`k = 6` then `k = 7`), so the comparator picks seeds `2⁻⁶` and `2⁻⁷`
+respectively. Watch the bracket search itself by unrolling it:
+
+```bash
+m=100                              # = floor(x) for x in [100, 101)
+k=0
+while ! bits_gt "$(int_to_bits $((1 << k)) 12)" "$(int_to_bits $m 12)" >/dev/null; do
+    echo "  2^$k is not > $m yet"; k=$((k + 1))
+done
+echo "bracket: k=$k, seed y0 = 2^-$k = $(echo "scale=20; 1/(2^$k)" | bc -l)"
+```
+
 ### EML application — sin by Taylor series, accuracy vs. term count
 
 `eml_sin_taylor` sums `x - x³/3! + x⁵/5! - …` using `eml_pow_int` for the powers,
@@ -585,10 +612,13 @@ above, and automated coverage in `test-boolean-funcs.sh`:
   snippets under [Layer 2](#layer-2--eml-operator).
 - **Taylor series via EML** — `eml_sin_taylor` approximates `sin(x)` from its
   Maclaurin series using `eml_pow_int`, `eml_div`, and `eml_sub`/`eml_add`.
+- **Comparator-driven `eml_recip` seeding** — `eml_recip_auto` brackets `x` with
+  the bit comparator (`int_to_bits` + `bits_gt`) and seeds Newton with `2⁻ᵏ`
+  automatically; no hand-supplied `y0`. Genuinely spans Layer 1 → Layer 2.
 
 ## Ideas for Further Extension
 
-- **Comparator-driven `eml_recip` seeding**: pick the Newton seed `y0`
-  automatically from the magnitude of `x` instead of passing it by hand.
 - **Hyperbolic / cos Taylor series**: reuse `eml_pow_int` and the accumulation
   pattern for `cos(x)` (even powers) and `sinh`/`cosh`.
+- **Adaptive Taylor term count**: keep adding terms until the next one falls
+  below a tolerance, instead of a fixed count.

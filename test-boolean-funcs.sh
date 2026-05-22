@@ -429,6 +429,16 @@ for a in 0 100 127 128 200 255; do for b in 0 100 127 128 200 255; do
         "$(compare8 $(dec_to_bits "$a" 8) $(dec_to_bits "$b" 8))"
 done; done
 
+section "int_to_bits (integer -> LSB-first bit string)"
+# Minimal width, then round-trip via the test helper's bits_to_dec.
+check_str "int_to_bits 0     = 0"     "0"      "$(int_to_bits 0)"
+check_str "int_to_bits 1     = 1"     "1"      "$(int_to_bits 1)"
+check_str "int_to_bits 5     = 1 0 1" "1 0 1"  "$(int_to_bits 5)"
+check_str "int_to_bits 5 6 padded"    "1 0 1 0 0 0" "$(int_to_bits 5 6)"
+for n in 0 1 7 8 100 255 2047; do
+    check_str "int_to_bits($n) round-trips" "$n" "$(bits_to_dec "$(int_to_bits "$n")")"
+done
+
 # ── 5. EML operator ───────────────────────────────────────────────────────────
 # eml(x,y) = exp(x) - ln(y). The EML operator is "functionally complete" in the
 # sense that exp, ln, and all arithmetic can be expressed as trees of eml nodes
@@ -519,6 +529,14 @@ check_float "sin_taylor(1.2)  ~ sin(1.2)"  "$(echo "s(1.2)" | bc -l)" "$(eml_sin
 check_float "sin_taylor(1.5)  ~ sin(1.5)"  "$(echo "s(1.5)" | bc -l)" "$(eml_sin_taylor 1.5)"        0.000001
 check_float "sin_taylor(pi/2) ~ 1"         1                          "$(eml_sin_taylor "$HALF_PI")" 0.00001
 check_float "sin_taylor(1.4, 8 terms)"     "$(echo "s(1.4)" | bc -l)" "$(eml_sin_taylor 1.4 8)"      0.0000001
+
+section "eml_recip_auto (comparator-seeded reciprocal) = eml_div"
+# The seed y0 is chosen automatically by bracketing x with the bit comparator;
+# the result must still match the direct reciprocal. Values are spread across
+# several power-of-two brackets, including the boundaries (63 vs 64, x near 2).
+for x in 1.5 1.99 4 10 63 64 100 1000; do
+    check_float "recip_auto($x) = 1/$x" "$(eml_div "$x")" "$(eml_recip_auto "$x")" 0.000000001
+done
 
 # ── 6. Math library — constants & roots ───────────────────────────────────────
 section "pi, sqrt, pow, log_base"
