@@ -128,22 +128,19 @@ or `true`/`false` strings.
 full_adder 1 1 1   # "1 1"  (1+1+1 = 3 = binary 11)
 ```
 
-### Composing full adders into a ripple-carry adder
+### `ripple_add4` / `ripple_add8` — multi-bit ripple-carry adders
 
-Chain four full adders, threading the carry-out of each stage into the
-carry-in of the next:
+`ripple_add4` chains four full adders, threading the carry-out of each stage
+into the carry-in of the next. `ripple_add8` chains two `ripple_add4` units, so
+the carry-out of the low nibble (bits 0–3) feeds the carry-in of the high nibble
+(bits 4–7). Both are built-in library functions. All bit strings are LSB-first.
 
 ```bash
-ripple_add4() {
-    # Inputs: A[0..3] B[0..3] Cin  (all LSB first)
-    # Output: S[0..3] Cout
-    local r c
-    r=$(full_adder "$1" "$5" "${9:-0}"); local s0; s0=$(first "$r"); c=$(second "$r")
-    r=$(full_adder "$2" "$6" "$c");      local s1; s1=$(first "$r"); c=$(second "$r")
-    r=$(full_adder "$3" "$7" "$c");      local s2; s2=$(first "$r"); c=$(second "$r")
-    r=$(full_adder "$4" "$8" "$c");      local s3; s3=$(first "$r"); local cout; cout=$(second "$r")
-    echo "$s0 $s1 $s2 $s3 $cout"
-}
+# ripple_add4: A0..A3 B0..B3 [Cin] -> S0..S3 Cout
+ripple_add4 1 1 0 0  1 0 1 0      # 3 + 5  -> 0 0 0 1 0   (= 8)
+
+# ripple_add8: A0..A7 B0..B7 [Cin] -> S0..S7 Cout
+ripple_add8 $(dec_to_bits 200 8) $(dec_to_bits 100 8)   # 200 + 100 (= 300)
 ```
 
 ```
@@ -156,6 +153,20 @@ ripple_add4() {
 
 The overflow case (carry-out = 1 with all sum bits 0) correctly signals that
 the result does not fit in 4 bits.
+
+### `ripple_sub4` / `ripple_sub8` — two's-complement subtractors
+
+Subtraction reuses the adders: `A − B = A + (~B) + 1`. The helper `flip_bit`
+inverts each bit of `B` (an XOR with 1), and the adder is run with carry-in = 1.
+
+```bash
+ripple_sub4 1 0 1 0  1 1 0 0      # 5 - 3  ->  0 1 0 0 1   (D = 2,  Cout=1: no borrow)
+ripple_sub4 1 1 0 0  1 0 1 0      # 3 - 5  ->  0 1 1 1 0   (D = 14 = -2, Cout=0: borrow)
+```
+
+The trailing carry-out doubles as the borrow flag: `1` means no borrow (`A ≥ B`)
+and the sum bits are the literal difference; `0` means borrow (`A < B`) and the
+sum bits hold the two's-complement of the negative result.
 
 ---
 
@@ -372,7 +383,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 280 passed, 0 failed
+# 343 passed, 0 failed
 ```
 
 Coverage summary:
@@ -383,6 +394,8 @@ Coverage summary:
 | Gate truth tables | All 4-row truth tables for every binary gate |
 | Boolean identities | De Morgan, double negation, idempotence, absorption, XOR inverse |
 | Adders | All 4 `half_adder` combinations with `true`/`false` strings; all 4 with `0`/`1` bit digits; 4 mixed inputs; all 8 `full_adder` combinations; `full_adder` string inputs |
+| Multi-bit adders | `ripple_add4` exact bit patterns + decoded sums over 30 input pairs + carry-in; `ripple_add8` low→high nibble carry propagation, 8-bit overflow, carry-in |
+| Subtractors | `flip_bit` truth table; `ripple_sub4` / `ripple_sub8` signed two's-complement results (positive and negative) and borrow-flag (carry-out) semantics |
 | EML | Base constructions; exp/ln mutual inverses; all five arithmetic ops; mul/div round-trips |
 | Math library | Key angles; Pythagorean identity `sin²+cos²=1`; odd/even symmetry; `cosh²−sinh²=1`; `tanh=sinh/cosh`; forward/inverse round-trips |
 | Edge cases — domain errors | `asin(±1)`, `acos(±1)`, `asec(±1)`, `acsc(±1)`, `atanh(±1)`, `csc(0)`, `cot(0)` — all produce empty output as expected |
@@ -399,8 +412,10 @@ true  false  is_true  is_false
 nand  not  and  or  nor  ne  eq  or_nand
 if_then  then_if  if_and_only_if
 
-# Adders
+# Adders & subtractors (LSB-first bit strings)
 half_adder  full_adder
+ripple_add4  ripple_add8
+flip_bit  ripple_sub4  ripple_sub8
 
 # List accessors
 lhead  ltail  first  second

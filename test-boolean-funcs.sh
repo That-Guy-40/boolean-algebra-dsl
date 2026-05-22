@@ -77,6 +77,37 @@ check_domain_err() {
 
 section() { printf '\n── %s\n' "$1"; }
 
+# Bit-string helpers for the multi-bit adder/subtractor tests.
+# All bit strings are LSB-first, matching the ripple_* function convention.
+
+# dec_to_bits N WIDTH: decimal -> space-separated LSB-first bit string.
+dec_to_bits() {
+    local n=$1 w=$2 i out=""
+    for ((i=0; i<w; i++)); do out+="$(( (n >> i) & 1 )) "; done
+    echo "${out% }"
+}
+
+# bits_to_dec "b0 b1 ...": LSB-first bit string -> decimal. Treats every field
+# as a bit, so passing a full adder output (sum bits + carry-out) yields the
+# exact unsigned sum, with the carry-out acting as the most significant bit.
+bits_to_dec() {
+    local d=0 i=0 b
+    for b in $1; do d=$(( d + (b << i) )); i=$(( i + 1 )); done
+    echo "$d"
+}
+
+# sub_signed OUTPUT WIDTH: interpret a ripple_subN output ("D0..D{W-1} Cout")
+# as a signed two's-complement integer. Cout=1 means no borrow (value as-is);
+# Cout=0 means borrow, so subtract 2^WIDTH to recover the negative value.
+sub_signed() {
+    local out="$1" w="$2"
+    local cout="${out##* }"          # last field
+    local bits="${out% *}"           # everything except the last field
+    local mag; mag=$(bits_to_dec "$bits")
+    if [ "$cout" = 0 ]; then mag=$(( mag - (1 << w) )); fi
+    echo "$mag"
+}
+
 # Precompute shared constants once. Many tests need these, and each bc call
 # carries process-spawn overhead in a shell loop.
 PI=$(pi)
@@ -274,6 +305,73 @@ section "full_adder accepts true/false strings"
 check_str "true false false = 1 0" "1 0" "$(full_adder true false false)"
 check_str "true true  false = 0 1" "0 1" "$(full_adder true true false)"
 check_str "true true  true  = 1 1" "1 1" "$(full_adder true true true)"
+
+# ── 4b. Multi-bit ripple-carry adders ─────────────────────────────────────────
+# ripple_add4 chains four full_adders; ripple_add8 chains two ripple_add4 units.
+# Decoding the full output (sum bits + carry-out) as one LSB-first number gives
+# the exact unsigned sum, so each test compares against plain shell A+B.
+
+section "ripple_add4"
+# Exact-output checks against the documented bit patterns (LSB first).
+check_str "3+5  = 0 0 0 1 0"  "0 0 0 1 0"  "$(ripple_add4 1 1 0 0  1 0 1 0)"
+check_str "7+7  = 0 1 1 1 0"  "0 1 1 1 0"  "$(ripple_add4 1 1 1 0  1 1 1 0)"
+check_str "15+1 = 0 0 0 0 1"  "0 0 0 0 1"  "$(ripple_add4 1 1 1 1  1 0 0 0)"  # 4-bit overflow
+check_str "0+0  = 0 0 0 0 0"  "0 0 0 0 0"  "$(ripple_add4 0 0 0 0  0 0 0 0)"
+# Decoded-sum checks across the full 0..15 input range (a + b for all pairs).
+for a in 0 1 5 8 14 15; do for b in 0 1 7 9 15; do
+    out=$(ripple_add4 $(dec_to_bits "$a" 4) $(dec_to_bits "$b" 4))
+    check_str "ripple_add4 $a+$b = $((a+b))" "$((a+b))" "$(bits_to_dec "$out")"
+done; done
+# Carry-in is honoured: 3 + 5 + 1 = 9.
+check_str "ripple_add4 3+5+Cin1 = 9" "9" \
+    "$(bits_to_dec "$(ripple_add4 1 1 0 0  1 0 1 0  1)")"
+
+section "ripple_add8 (two chained ripple_add4 units)"
+# The whole point of the 8-bit adder: the carry-out of the low nibble must feed
+# the carry-in of the high nibble. 255+1 and 200+100 both cross that boundary.
+check_str "ripple_add8 3+5   = 8"   "8"   "$(bits_to_dec "$(ripple_add8 $(dec_to_bits 3 8)   $(dec_to_bits 5 8))")"
+check_str "ripple_add8 15+1  = 16"  "16"  "$(bits_to_dec "$(ripple_add8 $(dec_to_bits 15 8)  $(dec_to_bits 1 8))")"   # low-nibble carry crosses
+check_str "ripple_add8 200+100=300" "300" "$(bits_to_dec "$(ripple_add8 $(dec_to_bits 200 8) $(dec_to_bits 100 8))")"
+check_str "ripple_add8 255+1  = 256" "256" "$(bits_to_dec "$(ripple_add8 $(dec_to_bits 255 8) $(dec_to_bits 1 8))")"   # 8-bit overflow
+check_str "ripple_add8 255+255=510" "510" "$(bits_to_dec "$(ripple_add8 $(dec_to_bits 255 8) $(dec_to_bits 255 8))")"
+check_str "ripple_add8 0+0    = 0"   "0"   "$(bits_to_dec "$(ripple_add8 $(dec_to_bits 0 8)   $(dec_to_bits 0 8))")"
+# Carry-in honoured: 100 + 100 + 1 = 201.
+check_str "ripple_add8 100+100+Cin1 = 201" "201" \
+    "$(bits_to_dec "$(ripple_add8 $(dec_to_bits 100 8) $(dec_to_bits 100 8) 1)")"
+
+# ── 4c. Subtractors (two's complement) ────────────────────────────────────────
+# A - B is computed as A + (~B) + 1: flip every B bit and force carry-in = 1.
+# The trailing carry-out is the borrow flag: 1 = no borrow (A>=B), 0 = borrow.
+
+section "flip_bit"
+check_str "flip 0 = 1"     "1"  "$(flip_bit 0)"
+check_str "flip 1 = 0"     "0"  "$(flip_bit 1)"
+check_str "flip true = 0"  "0"  "$(flip_bit true)"
+check_str "flip false = 1" "1"  "$(flip_bit false)"
+check_str "flip T = 0"     "0"  "$(flip_bit T)"
+
+section "ripple_sub4 (signed result via two's complement)"
+# Positive results (A>=B): carry-out = 1 (no borrow).
+check_str "sub4 5-3  =  2" "2"  "$(sub_signed "$(ripple_sub4 $(dec_to_bits 5 4)  $(dec_to_bits 3 4))" 4)"
+check_str "sub4 15-0 = 15" "15" "$(sub_signed "$(ripple_sub4 $(dec_to_bits 15 4) $(dec_to_bits 0 4))" 4)"
+check_str "sub4 8-8  =  0" "0"  "$(sub_signed "$(ripple_sub4 $(dec_to_bits 8 4)  $(dec_to_bits 8 4))" 4)"
+check_str "sub4 10-7 =  3" "3"  "$(sub_signed "$(ripple_sub4 $(dec_to_bits 10 4) $(dec_to_bits 7 4))" 4)"
+# Negative results (A<B): carry-out = 0 (borrow), result is two's-complement.
+check_str "sub4 3-5  = -2" "-2"  "$(sub_signed "$(ripple_sub4 $(dec_to_bits 3 4)  $(dec_to_bits 5 4))" 4)"
+check_str "sub4 0-15 =-15" "-15" "$(sub_signed "$(ripple_sub4 $(dec_to_bits 0 4)  $(dec_to_bits 15 4))" 4)"
+check_str "sub4 7-10 = -3" "-3"  "$(sub_signed "$(ripple_sub4 $(dec_to_bits 7 4)  $(dec_to_bits 10 4))" 4)"
+check_str "sub4 0-1  = -1" "-1"  "$(sub_signed "$(ripple_sub4 $(dec_to_bits 0 4)  $(dec_to_bits 1 4))" 4)"
+# Borrow flag = carry-out (5th field): 1 when A>=B (no borrow), 0 when A<B.
+check_str "sub4 5-3 carry-out = 1 (no borrow)" "1" "$(ripple_sub4 $(dec_to_bits 5 4) $(dec_to_bits 3 4) | cut -d' ' -f5)"
+check_str "sub4 3-5 carry-out = 0 (borrow)"    "0" "$(ripple_sub4 $(dec_to_bits 3 4) $(dec_to_bits 5 4) | cut -d' ' -f5)"
+
+section "ripple_sub8 (signed result via two's complement)"
+check_str "sub8 100-50 =  50"  "50"   "$(sub_signed "$(ripple_sub8 $(dec_to_bits 100 8) $(dec_to_bits 50 8))" 8)"
+check_str "sub8 50-100 = -50"  "-50"  "$(sub_signed "$(ripple_sub8 $(dec_to_bits 50 8)  $(dec_to_bits 100 8))" 8)"
+check_str "sub8 255-255 =  0"  "0"    "$(sub_signed "$(ripple_sub8 $(dec_to_bits 255 8) $(dec_to_bits 255 8))" 8)"
+check_str "sub8 200-1  = 199"  "199"  "$(sub_signed "$(ripple_sub8 $(dec_to_bits 200 8) $(dec_to_bits 1 8))" 8)"
+check_str "sub8 0-200  =-200"  "-200" "$(sub_signed "$(ripple_sub8 $(dec_to_bits 0 8)   $(dec_to_bits 200 8))" 8)"
+check_str "sub8 128-128 =  0"  "0"    "$(sub_signed "$(ripple_sub8 $(dec_to_bits 128 8) $(dec_to_bits 128 8))" 8)"
 
 # ── 5. EML operator ───────────────────────────────────────────────────────────
 # eml(x,y) = exp(x) - ln(y). The EML operator is "functionally complete" in the

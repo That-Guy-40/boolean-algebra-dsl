@@ -279,10 +279,29 @@ done
 
 ---
 
+## Implemented Extensions
+
+These started as ideas below and are now built-in library functions (see the
+adder/subtractor tests in `test-boolean-funcs.sh`):
+
+- **8-bit adder** — `ripple_add8` chains two `ripple_add4` units, connecting the
+  carry-out of the low nibble to the carry-in of the high nibble.
+- **Subtractor** — `ripple_sub4` / `ripple_sub8` XOR the B inputs with `1` (via
+  `flip_bit`) and feed `Cin=1` to perform two's-complement subtraction.
+
+```bash
+# 8-bit add with a carry that crosses the nibble boundary
+ripple_add8 $(dec_to_bits 200 8) $(dec_to_bits 100 8)   # = 300
+
+# subtraction, with the carry-out acting as the borrow flag
+ripple_sub4 1 0 1 0  1 1 0 0     # 5 - 3 = "0 1 0 0 1"  (D=2, no borrow)
+ripple_sub4 1 1 0 0  1 0 1 0     # 3 - 5 = "0 1 1 1 0"  (D=-2, borrow)
+```
+
+(`dec_to_bits N WIDTH` is a convenience helper defined in the test suite.)
+
 ## Ideas for Further Extension
 
-- **8-bit adder**: chain two `ripple_add4` units, connecting the carry-out of the first to the carry-in of the second.
-- **Subtractor**: XOR the B inputs with `1` (flip bits) and feed `Cin=1` to perform two's-complement subtraction.
 - **Comparator**: `A = B` iff `XNOR` of all bit-pairs; `A > B` via cascaded priority logic.
 - **EML reciprocal iteration**: Newton's method for `1/x` using only EML operations.
 - **Taylor series via EML**: approximate `sin(x) ≈ x - x³/6 + x⁵/120` using `eml_mul` for powers and `eml_sub`/`eml_add` for accumulation.

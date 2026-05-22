@@ -328,6 +328,74 @@ full_adder ()
 #full_adder 1 1 1  # -> 1 1
 
 
+# MULTI-BIT RIPPLE-CARRY ADDERS AND SUBTRACTORS
+# Built by chaining full_adder stages. Every bit string is LSB-first:
+# the first argument/output field is bit 0 (the least significant bit).
+# Inputs accept 0/1 digits or true/false strings (full_adder normalises them).
+
+ripple_add4 ()
+{
+  # A0 A1 A2 A3  B0 B1 B2 B3  [Cin]   ->   S0 S1 S2 S3 Cout
+  # Threads the carry-out of each full_adder stage into the next stage's carry-in.
+  local r c s0 s1 s2 s3 cout
+  r=$(full_adder "$1" "$5" "${9:-0}"); s0=$(first "$r"); c=$(second "$r")
+  r=$(full_adder "$2" "$6" "$c");      s1=$(first "$r"); c=$(second "$r")
+  r=$(full_adder "$3" "$7" "$c");      s2=$(first "$r"); c=$(second "$r")
+  r=$(full_adder "$4" "$8" "$c");      s3=$(first "$r"); cout=$(second "$r")
+  echo "$s0 $s1 $s2 $s3 $cout"
+}
+
+ripple_add8 ()
+{
+  # A0..A7  B0..B7  [Cin]   ->   S0..S7 Cout
+  # Chains two ripple_add4 units: the carry-out of the low nibble (bits 0-3)
+  # becomes the carry-in of the high nibble (bits 4-7).
+  local cin="${17:-0}"
+  local lo hi s0 s1 s2 s3 cmid s4 s5 s6 s7 cout
+  lo=$(ripple_add4 "$1" "$2" "$3" "$4"  "$9"  "${10}" "${11}" "${12}" "$cin")
+  read -r s0 s1 s2 s3 cmid <<< "$lo"
+  hi=$(ripple_add4 "$5" "$6" "$7" "$8"  "${13}" "${14}" "${15}" "${16}" "$cmid")
+  read -r s4 s5 s6 s7 cout <<< "$hi"
+  echo "$s0 $s1 $s2 $s3 $s4 $s5 $s6 $s7 $cout"
+}
+
+flip_bit ()
+{
+  # Bitwise NOT of a single bit (XOR with 1). Accepts 0/1 or true/false; emits 0/1.
+  case "$1" in 1|t|T|true|True) echo 0 ;; *) echo 1 ;; esac
+}
+
+ripple_sub4 ()
+{
+  # A0..A3  B0..B3   ->   D0 D1 D2 D3 Cout      where D = A - B
+  # Two's-complement subtraction: A - B = A + (~B) + 1.
+  # Flip every B bit and force carry-in = 1.
+  # Trailing Cout is the adder carry-out: 1 = no borrow (A >= B);
+  # 0 = borrow (A < B), in which case D is the two's-complement of (B - A).
+  local fb0 fb1 fb2 fb3
+  fb0=$(flip_bit "$5"); fb1=$(flip_bit "$6"); fb2=$(flip_bit "$7"); fb3=$(flip_bit "$8")
+  ripple_add4 "$1" "$2" "$3" "$4" "$fb0" "$fb1" "$fb2" "$fb3" 1
+}
+
+ripple_sub8 ()
+{
+  # A0..A7  B0..B7   ->   D0..D7 Cout           where D = A - B
+  # Same two's-complement method as ripple_sub4, over 8 bits via ripple_add8.
+  local i fb=()
+  for i in 9 10 11 12 13 14 15 16; do fb+=("$(flip_bit "${!i}")"); done
+  ripple_add8 "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" \
+              "${fb[0]}" "${fb[1]}" "${fb[2]}" "${fb[3]}" \
+              "${fb[4]}" "${fb[5]}" "${fb[6]}" "${fb[7]}" 1
+}
+
+# ripple-carry testing (LSB first):
+#ripple_add4 1 1 0 0  1 0 1 0      # 3 + 5  -> 0 0 0 1 0   (= 8)
+#ripple_add4 1 1 1 1  1 0 0 0      # 15 + 1 -> 0 0 0 0 1   (= 16, carry-out set)
+#ripple_add8 0 0 0 0 0 0 0 1  0 0 0 0 0 0 0 1   # 128+128 -> ...1 (=256)
+#ripple_sub4 1 0 1 0  1 1 0 0      # 5 - 3  -> 0 1 0 0 1   (D=2, no borrow)
+#ripple_sub4 1 1 0 0  1 0 1 0      # 3 - 5  -> 0 1 1 1 0   (D=14=-2, borrow)
+
+
 # EML OPERATOR
 # eml(x, y) = exp(x) - ln(y)
 # Introduced by Odrzywołek (2026). Functionally complete in continuous mathematics:

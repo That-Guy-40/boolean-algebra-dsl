@@ -57,13 +57,21 @@ not(or(A,B))         → nor
 | `eq A B` | A↔B (XNOR) | inputs differ |
 | `if_then A B` | A→B | A true, B false |
 
-### Adders
+### Adders and subtractors
 
-`half_adder` and `full_adder` operate on `0`/`1` bit strings and accept either digit or `true`/`false` string inputs.
+`half_adder` and `full_adder` operate on `0`/`1` bit strings and accept either digit or `true`/`false` string inputs. They compose into multi-bit ripple-carry adders and two's-complement subtractors. All multi-bit strings are **LSB-first** (bit 0 first).
 
 ```bash
 half_adder true true    # "0 1"  (1+1 = 0, carry 1)
 full_adder 1 1 1        # "1 1"  (1+1+1 = 3 = binary 11)
+
+# ripple_add4: A0..A3 B0..B3 [Cin] -> S0..S3 Cout
+ripple_add4 1 1 0 0  1 0 1 0    # 3 + 5  -> "0 0 0 1 0"  (= 8)
+ripple_add4 1 1 1 1  1 0 0 0    # 15 + 1 -> "0 0 0 0 1"  (= 16, carry set)
+
+# ripple_add8: chains two ripple_add4 units (low-nibble carry feeds the high nibble)
+# ripple_sub4 / ripple_sub8: A - B via A + (~B) + 1 (flip B bits, force Cin=1)
+# Trailing carry-out is the borrow flag: 1 = no borrow (A>=B), 0 = borrow (A<B)
 ```
 
 ## Layer 2 — EML Operator
@@ -132,10 +140,10 @@ sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 
 ```bash
 bash test-boolean-funcs.sh
-# 280 passed, 0 failed
+# 343 passed, 0 failed
 ```
 
-Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR inverse), all 8 full-adder combinations, EML mutual inverses, arithmetic round-trips, trig/inverse-trig/hyperbolic round-trips, domain error cases.
+Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR inverse), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), EML mutual inverses, arithmetic round-trips, trig/inverse-trig/hyperbolic round-trips, domain error cases.
 
 ## Attribution
 
@@ -150,8 +158,10 @@ true  false  is_true  is_false
 nand  not  and  or  nor  ne  eq  or_nand
 if_then  then_if  if_and_only_if
 
-# Adders
+# Adders & subtractors (LSB-first bit strings)
 half_adder  full_adder
+ripple_add4  ripple_add8
+flip_bit  ripple_sub4  ripple_sub8
 
 # List accessors
 lhead  ltail  first  second
