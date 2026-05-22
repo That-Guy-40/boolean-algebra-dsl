@@ -132,10 +132,15 @@ sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 
 ```bash
 bash test-boolean-funcs.sh
-# 272 passed, 0 failed
+# 280 passed, 0 failed
 ```
 
 Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR inverse), all 8 full-adder combinations, EML mutual inverses, arithmetic round-trips, trig/inverse-trig/hyperbolic round-trips, domain error cases.
+
+## Attribution
+
+- **Claude Opus** — principal author of the Bash implementation: Boolean DSL architecture, EML operator derivations, bootstrapped math library, and test suite.
+- **[That-Guy-40](https://github.com/That-Guy-40)** — original idea to implement this in Bash, integration work, and manual testing.
 
 ## Reference
 
