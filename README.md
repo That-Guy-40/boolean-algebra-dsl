@@ -57,9 +57,9 @@ not(or(A,B))         → nor
 | `eq A B` | A↔B (XNOR) | inputs differ |
 | `if_then A B` | A→B | A true, B false |
 
-### Adders and subtractors
+### Adders, subtractors, and comparators
 
-`half_adder` and `full_adder` operate on `0`/`1` bit strings and accept either digit or `true`/`false` string inputs. They compose into multi-bit ripple-carry adders and two's-complement subtractors. All multi-bit strings are **LSB-first** (bit 0 first).
+`half_adder` and `full_adder` operate on `0`/`1` bit strings and accept either digit or `true`/`false` string inputs. They compose into multi-bit ripple-carry adders, two's-complement subtractors, and magnitude comparators. All multi-bit strings are **LSB-first** (bit 0 first).
 
 ```bash
 half_adder true true    # "0 1"  (1+1 = 0, carry 1)
@@ -72,7 +72,16 @@ ripple_add4 1 1 1 1  1 0 0 0    # 15 + 1 -> "0 0 0 0 1"  (= 16, carry set)
 # ripple_add8: chains two ripple_add4 units (low-nibble carry feeds the high nibble)
 # ripple_sub4 / ripple_sub8: A - B via A + (~B) + 1 (flip B bits, force Cin=1)
 # Trailing carry-out is the borrow flag: 1 = no borrow (A>=B), 0 = borrow (A<B)
+
+# compare4 / compare8: echo lt / eq / gt
+compare4 1 0 1 0  1 1 0 0       # 5 vs 3 -> "gt"
+compare4 0 0 0 1  1 1 1 0       # 8 vs 7 -> "gt"  (decided at the MSB)
+
+# bits_eq / bits_gt: width-generic predicates (true/false + exit code)
+if bits_gt "$(echo 1 0 1 0)" "$(echo 1 1 0 0)"; then echo "5 > 3"; fi
 ```
+
+Equality is the XNOR of every bit pair, all ANDed together; greater-than uses cascaded priority logic from the MSB down (the first differing bit decides). Less-than is `bits_gt` with the operands swapped.
 
 ## Layer 2 — EML Operator
 
@@ -140,10 +149,10 @@ sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 
 ```bash
 bash test-boolean-funcs.sh
-# 343 passed, 0 failed
+# 462 passed, 0 failed
 ```
 
-Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR inverse), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), EML mutual inverses, arithmetic round-trips, trig/inverse-trig/hyperbolic round-trips, domain error cases.
+Coverage: all gate truth tables, Boolean identities (De Morgan, absorption, XOR inverse), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), EML mutual inverses, arithmetic round-trips, trig/inverse-trig/hyperbolic round-trips, domain error cases.
 
 ## Attribution
 
@@ -158,10 +167,11 @@ true  false  is_true  is_false
 nand  not  and  or  nor  ne  eq  or_nand
 if_then  then_if  if_and_only_if
 
-# Adders & subtractors (LSB-first bit strings)
+# Adders, subtractors & comparators (LSB-first bit strings)
 half_adder  full_adder
 ripple_add4  ripple_add8
 flip_bit  ripple_sub4  ripple_sub8
+bit_to_bool  bits_eq  bits_gt  compare4  compare8
 
 # List accessors
 lhead  ltail  first  second

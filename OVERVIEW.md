@@ -168,6 +168,34 @@ The trailing carry-out doubles as the borrow flag: `1` means no borrow (`A ≥ B
 and the sum bits are the literal difference; `0` means borrow (`A < B`) and the
 sum bits hold the two's-complement of the negative result.
 
+### `compare4` / `compare8` — magnitude comparators
+
+Two comparison primitives, both built purely from Boolean gates:
+
+- **Equality** (`bits_eq`): `A = B` iff the XNOR (`eq`) of every bit pair is
+  true — i.e. all pairs match. The per-bit XNORs are ANDed together.
+- **Greater-than** (`bits_gt`): cascaded priority logic, scanning from the most
+  significant bit down. `A > B` at the first bit where the two differ and `A`
+  holds the 1; a running "all higher bits equal" flag gates each lower bit's
+  contribution, so the highest differing bit always decides.
+
+`bits_eq` and `bits_gt` are width-generic predicates (they take two LSB-first
+bit strings, echo `true`/`false`, and set the exit code). `compare4` / `compare8`
+are positional wrappers that echo `lt` / `eq` / `gt`. Less-than needs no separate
+function — it is `bits_gt` with the operands swapped.
+
+```bash
+compare4 1 0 1 0  1 1 0 0      # 5 vs 3 -> gt
+compare4 1 1 0 0  1 0 1 0      # 3 vs 5 -> lt
+compare4 0 0 0 1  1 1 1 0      # 8 vs 7 -> gt   (decided at the MSB, not bit count)
+
+if bits_eq "1 0 1 0" "1 0 1 0"; then echo equal; fi   # composes with if
+```
+
+The `8 vs 7` case (`1000` vs `0111`) is the one a naive "count the 1s" approach
+gets wrong: cascaded priority correctly lets the single high bit of 8 outweigh
+the three low bits of 7.
+
 ---
 
 ## Layer 2 — EML Operator
@@ -383,7 +411,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 343 passed, 0 failed
+# 462 passed, 0 failed
 ```
 
 Coverage summary:
@@ -396,6 +424,7 @@ Coverage summary:
 | Adders | All 4 `half_adder` combinations with `true`/`false` strings; all 4 with `0`/`1` bit digits; 4 mixed inputs; all 8 `full_adder` combinations; `full_adder` string inputs |
 | Multi-bit adders | `ripple_add4` exact bit patterns + decoded sums over 30 input pairs + carry-in; `ripple_add8` low→high nibble carry propagation, 8-bit overflow, carry-in |
 | Subtractors | `flip_bit` truth table; `ripple_sub4` / `ripple_sub8` signed two's-complement results (positive and negative) and borrow-flag (carry-out) semantics |
+| Comparators | `bit_to_bool`; `bits_eq` / `bits_gt` predicate exit codes; `compare4` over the full 8×8 grid and `compare8` over a 6×6 grid vs shell `-lt`/`-gt`; cascaded-priority edge cases (8 vs 7) |
 | EML | Base constructions; exp/ln mutual inverses; all five arithmetic ops; mul/div round-trips |
 | Math library | Key angles; Pythagorean identity `sin²+cos²=1`; odd/even symmetry; `cosh²−sinh²=1`; `tanh=sinh/cosh`; forward/inverse round-trips |
 | Edge cases — domain errors | `asin(±1)`, `acos(±1)`, `asec(±1)`, `acsc(±1)`, `atanh(±1)`, `csc(0)`, `cot(0)` — all produce empty output as expected |
@@ -412,10 +441,11 @@ true  false  is_true  is_false
 nand  not  and  or  nor  ne  eq  or_nand
 if_then  then_if  if_and_only_if
 
-# Adders & subtractors (LSB-first bit strings)
+# Adders, subtractors & comparators (LSB-first bit strings)
 half_adder  full_adder
 ripple_add4  ripple_add8
 flip_bit  ripple_sub4  ripple_sub8
+bit_to_bool  bits_eq  bits_gt  compare4  compare8
 
 # List accessors
 lhead  ltail  first  second

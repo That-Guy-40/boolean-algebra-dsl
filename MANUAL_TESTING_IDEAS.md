@@ -288,6 +288,8 @@ adder/subtractor tests in `test-boolean-funcs.sh`):
   carry-out of the low nibble to the carry-in of the high nibble.
 - **Subtractor** — `ripple_sub4` / `ripple_sub8` XOR the B inputs with `1` (via
   `flip_bit`) and feed `Cin=1` to perform two's-complement subtraction.
+- **Comparator** — `bits_eq` (XNOR of all bit-pairs, ANDed) and `bits_gt`
+  (cascaded priority from the MSB); `compare4` / `compare8` echo `lt`/`eq`/`gt`.
 
 ```bash
 # 8-bit add with a carry that crosses the nibble boundary
@@ -296,12 +298,15 @@ ripple_add8 $(dec_to_bits 200 8) $(dec_to_bits 100 8)   # = 300
 # subtraction, with the carry-out acting as the borrow flag
 ripple_sub4 1 0 1 0  1 1 0 0     # 5 - 3 = "0 1 0 0 1"  (D=2, no borrow)
 ripple_sub4 1 1 0 0  1 0 1 0     # 3 - 5 = "0 1 1 1 0"  (D=-2, borrow)
+
+# comparison
+compare4 1 0 1 0  1 1 0 0        # 5 vs 3 -> gt
+compare4 0 0 0 1  1 1 1 0        # 8 vs 7 -> gt  (MSB decides, not bit count)
 ```
 
 (`dec_to_bits N WIDTH` is a convenience helper defined in the test suite.)
 
 ## Ideas for Further Extension
 
-- **Comparator**: `A = B` iff `XNOR` of all bit-pairs; `A > B` via cascaded priority logic.
 - **EML reciprocal iteration**: Newton's method for `1/x` using only EML operations.
 - **Taylor series via EML**: approximate `sin(x) ≈ x - x³/6 + x⁵/120` using `eml_mul` for powers and `eml_sub`/`eml_add` for accumulation.

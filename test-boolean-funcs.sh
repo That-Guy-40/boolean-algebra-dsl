@@ -373,6 +373,62 @@ check_str "sub8 200-1  = 199"  "199"  "$(sub_signed "$(ripple_sub8 $(dec_to_bits
 check_str "sub8 0-200  =-200"  "-200" "$(sub_signed "$(ripple_sub8 $(dec_to_bits 0 8)   $(dec_to_bits 200 8))" 8)"
 check_str "sub8 128-128 =  0"  "0"    "$(sub_signed "$(ripple_sub8 $(dec_to_bits 128 8) $(dec_to_bits 128 8))" 8)"
 
+# ── 4d. Magnitude comparators ─────────────────────────────────────────────────
+# bits_eq:  A == B  iff XNOR of every bit pair (all ANDed together).
+# bits_gt:  A >  B  via cascaded priority logic from the MSB down.
+# compare4/compare8: positional wrappers echoing lt/eq/gt.
+
+# expected_cmp A B: reference lt/eq/gt using shell integer comparison.
+expected_cmp() {
+    if   [ "$1" -lt "$2" ]; then echo lt
+    elif [ "$1" -gt "$2" ]; then echo gt
+    else echo eq; fi
+}
+
+section "bit_to_bool"
+check_str "bit_to_bool 0     = false" false "$(bit_to_bool 0)"
+check_str "bit_to_bool 1     = true"  true  "$(bit_to_bool 1)"
+check_str "bit_to_bool true  = true"  true  "$(bit_to_bool true)"
+check_str "bit_to_bool false = false" false "$(bit_to_bool false)"
+check_str "bit_to_bool T     = true"  true  "$(bit_to_bool T)"
+check_str "bit_to_bool F     = false" false "$(bit_to_bool F)"
+
+section "bits_eq / bits_gt predicates (exit codes)"
+# Exit-code convention: 0 = true. These compose with `if`.
+check_exit "bits_eq 5==5 -> true"  0 bits_eq "$(dec_to_bits 5 4)" "$(dec_to_bits 5 4)"
+check_exit "bits_eq 5==3 -> false" 1 bits_eq "$(dec_to_bits 5 4)" "$(dec_to_bits 3 4)"
+check_exit "bits_eq 0==0 -> true"  0 bits_eq "$(dec_to_bits 0 4)" "$(dec_to_bits 0 4)"
+check_exit "bits_gt 5>3  -> true"  0 bits_gt "$(dec_to_bits 5 4)" "$(dec_to_bits 3 4)"
+check_exit "bits_gt 3>5  -> false" 1 bits_gt "$(dec_to_bits 3 4)" "$(dec_to_bits 5 4)"
+check_exit "bits_gt 5>5  -> false" 1 bits_gt "$(dec_to_bits 5 4)" "$(dec_to_bits 5 4)"
+# Echoed-string convention (true/false), matching the Boolean gates.
+check_str "bits_eq echoes true"  true  "$(bits_eq "$(dec_to_bits 5 4)" "$(dec_to_bits 5 4)")"
+check_str "bits_gt echoes false" false "$(bits_gt "$(dec_to_bits 3 4)" "$(dec_to_bits 5 4)")"
+# Less-than is bits_gt with operands swapped: 3 < 5  <=>  bits_gt(5,3).
+check_exit "3<5 via bits_gt(5,3) -> true" 0 bits_gt "$(dec_to_bits 5 4)" "$(dec_to_bits 3 4)"
+
+section "compare4 (lt/eq/gt over a 0..15 grid sample)"
+# Every ordered pair from a representative sample must agree with shell integer
+# comparison. Catches any sign/cascade slip.
+for a in 0 1 5 7 8 9 14 15; do for b in 0 1 5 7 8 9 14 15; do
+    check_str "compare4 $a vs $b" "$(expected_cmp "$a" "$b")" \
+        "$(compare4 $(dec_to_bits "$a" 4) $(dec_to_bits "$b" 4))"
+done; done
+
+section "compare4 cascaded-priority edge cases (MSB dominates)"
+# 8 = 1000, 7 = 0111: A>B is decided at the most significant bit even though B
+# has more low-order 1s. This is the case a naive bit count gets wrong.
+check_str "compare4 8 vs 7 = gt"  gt "$(compare4 $(dec_to_bits 8 4)  $(dec_to_bits 7 4))"
+check_str "compare4 7 vs 8 = lt"  lt "$(compare4 $(dec_to_bits 7 4)  $(dec_to_bits 8 4))"
+check_str "compare4 9 vs 10 = lt" lt "$(compare4 $(dec_to_bits 9 4)  $(dec_to_bits 10 4))"
+check_str "compare4 15 vs 0 = gt" gt "$(compare4 $(dec_to_bits 15 4) $(dec_to_bits 0 4))"
+
+section "compare8 (lt/eq/gt)"
+for a in 0 100 127 128 200 255; do for b in 0 100 127 128 200 255; do
+    check_str "compare8 $a vs $b" "$(expected_cmp "$a" "$b")" \
+        "$(compare8 $(dec_to_bits "$a" 8) $(dec_to_bits "$b" 8))"
+done; done
+
 # ── 5. EML operator ───────────────────────────────────────────────────────────
 # eml(x,y) = exp(x) - ln(y). The EML operator is "functionally complete" in the
 # sense that exp, ln, and all arithmetic can be expressed as trees of eml nodes

@@ -396,6 +396,86 @@ ripple_sub8 ()
 #ripple_sub4 1 1 0 0  1 0 1 0      # 3 - 5  -> 0 1 1 1 0   (D=14=-2, borrow)
 
 
+# MAGNITUDE COMPARATORS
+# Compare two LSB-first bit strings. Inputs accept 0/1 digits or true/false
+# strings. bits_eq and bits_gt are width-generic predicates that echo
+# "true"/"false" and set the exit code (Boolean-gate convention), so they
+# compose with `if`. compare4/compare8 are positional convenience wrappers
+# (matching the ripple_* calling style) that echo "lt" / "eq" / "gt".
+
+bit_to_bool ()
+{
+  # Normalise a single bit (0/1 or true/false) to the function name true/false,
+  # which the Boolean gates require. Companion to flip_bit.
+  case "$1" in 1|t|T|true|True) echo true ;; *) echo false ;; esac
+}
+
+bits_eq ()
+{
+  # bits_eq "A0 A1 .. An" "B0 B1 .. Bn"  ->  A == B
+  # XNOR (eq) every bit pair, then AND all the results together: equal iff every
+  # pair matches.
+  local -a A B
+  read -ra A <<< "$1"
+  read -ra B <<< "$2"
+  local acc=true i
+  for ((i=0; i<${#A[@]}; i++)); do
+    acc=$(and "$acc" "$(eq "$(bit_to_bool "${A[i]}")" "$(bit_to_bool "${B[i]}")")")
+  done
+  if [ "$acc" = true ]; then echo true; true; else echo false; false; fi
+}
+
+bits_gt ()
+{
+  # bits_gt "A0 A1 .. An" "B0 B1 .. Bn"  ->  A > B
+  # Cascaded priority comparison, scanning from the most significant bit down:
+  # A > B at the first bit where the two differ and A holds the 1. A running
+  # "all higher bits equal" flag gates each lower bit's contribution.
+  #   greater      |= higher_equal AND (Ai AND NOT Bi)
+  #   higher_equal &= eq(Ai, Bi)
+  local -a A B
+  read -ra A <<< "$1"
+  read -ra B <<< "$2"
+  local greater=false higher_equal=true i ai bi mi
+  for ((i=${#A[@]}-1; i>=0; i--)); do
+    ai=$(bit_to_bool "${A[i]}"); bi=$(bit_to_bool "${B[i]}")
+    mi=$(and "$ai" "$(not "$bi")")
+    greater=$(or "$greater" "$(and "$higher_equal" "$mi")")
+    higher_equal=$(and "$higher_equal" "$(eq "$ai" "$bi")")
+  done
+  if [ "$greater" = true ]; then echo true; true; else echo false; false; fi
+}
+
+# Less-than needs no separate function: A < B is just bits_gt "$B" "$A".
+
+compare4 ()
+{
+  # A0..A3 B0..B3   ->   echoes "lt" | "eq" | "gt"
+  local a="$1 $2 $3 $4" b="$5 $6 $7 $8"
+  if   bits_eq "$a" "$b" >/dev/null; then echo eq
+  elif bits_gt "$a" "$b" >/dev/null; then echo gt
+  else echo lt; fi
+}
+
+compare8 ()
+{
+  # A0..A7 B0..B7   ->   echoes "lt" | "eq" | "gt"
+  local a="$1 $2 $3 $4 $5 $6 $7 $8"
+  local b="$9 ${10} ${11} ${12} ${13} ${14} ${15} ${16}"
+  if   bits_eq "$a" "$b" >/dev/null; then echo eq
+  elif bits_gt "$a" "$b" >/dev/null; then echo gt
+  else echo lt; fi
+}
+
+# comparator testing (LSB first):
+#compare4 1 0 1 0  1 1 0 0      # 5 vs 3 -> gt
+#compare4 1 1 0 0  1 0 1 0      # 3 vs 5 -> lt
+#compare4 1 0 1 0  1 0 1 0      # 5 vs 5 -> eq
+#compare4 0 0 0 1  1 1 1 0      # 8 vs 7 -> gt   (decided at the MSB)
+#bits_gt  "1 0 1 0" "1 1 0 0"   # true  (5 > 3)
+#bits_eq  "1 0 1 0" "1 0 1 0"   # true  (5 == 5)
+
+
 # EML OPERATOR
 # eml(x, y) = exp(x) - ln(y)
 # Introduced by Odrzywołek (2026). Functionally complete in continuous mathematics:
