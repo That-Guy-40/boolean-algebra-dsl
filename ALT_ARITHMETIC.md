@@ -93,7 +93,11 @@ and composition becomes string-building:
 | `any`/`all pred xs` | exists / forall | over a predicate |
 
 `map`/`fold`/etc. take a function argument that is **either a command name or a
-fn value** (`as_fn`/`as_fn2` normalise the two).
+fn value** (`as_fn`/`as_fn2` normalise the two). The five core combinators
+(`FN_ID`/`apply`/`apply2`/`lift`/`compose`) live in `alt-arithmetic.sh` since the
+Church layer needs them; everything from `as_fn` down — the Scheme-style list
+toolkit — lives in **`list-processing-kit.sh`**, which `alt-arithmetic.sh` sources
+(so it's reusable on its own, and available alongside the arithmetic models).
 
 ```bash
 apply   "$(compose "$INC" "$DBL")" 5    # 11   (inc∘double: 2·5+1)
