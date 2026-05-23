@@ -7,6 +7,12 @@ already has both halves in embryo: the circuit side (gates → ripple adder → 
 and the function side (the combinator layer + Church numerals/booleans/pairs in
 `alt-arithmetic.sh`). These TODOs build the missing pieces and then join them.
 
+**Guiding philosophy** (full statement in `CLAUDE.md`): this project celebrates
+**building the same idea more than one way — bottom-up *and* top-down — and proving
+the constructions agree**, because that equivalence is how we understand how the
+concepts relate. The deeper goal is **tools and tutorials that democratize
+exploration and learning, starting with ourselves.**
+
 **Working convention** (so each layer stays understandable and self-contained):
 - Each new layer gets **its own `.sh` file**, sourcing what it builds on.
 - Each gets **its own test file** (`test-*.sh`), kept out of the fast 1022-test core
