@@ -114,32 +114,76 @@ peano_expt ()
 # ═════════════════════════════════════════════════════════════════════════════
 # FUNCTION-APPLICATION MACHINERY  (a tiny combinator layer)
 #
-# Church numerals are pure higher-order functions, so first we need to treat
-# functions as values. Bash has no closures that survive a command-substitution
-# subshell — so a "fn value" here is a STRING of bash code that reads its argument
-# from $1 and echoes its result. Strings pass through `$(…)` unharmed, so we can
-# build, compose, and store functions as data. Composition is just string-building.
+# To treat functions as values, a "fn value" here is a STRING of bash code that
+# reads its argument(s) from $1 (and $2) and echoes its result. Strings pass
+# through `$(…)` unharmed (no closures needed), so functions become data and
+# composition is just string-building. A "list" is a space-separated string of
+# atoms (the LSB-first / Scheme convention; atoms must not contain spaces).
 #
-#   FN_ID            identity              λx. x
-#   apply  f x       application           f(x)
-#   lift   name      command  → fn value   wrap a unary command so it takes $1
-#   compose f g      composition           λx. f(g(x))
-#   foldr  c z xs…   right fold            c x1 (c x2 (… (c xn z)))
+#   FN_ID                identity            λx. x
+#   apply  f x           application         f(x)
+#   apply2 f a b         binary application  f(a, b)
+#   lift   name          command → fn value  wrap a unary command as `name "$1"`
+#   compose f g          composition         λx. f(g(x))
+#   lnull/lhead/ltail/llength               Scheme-style list primitives
+#   map / mapcar f xs    map a unary f over a list (iterative / recursive)
+#   filter pred xs       keep atoms where pred echoes "true"
+#   foldl / foldr f z xs left / right fold with a binary f
+#
+# map/fold accept a FUNCTION ARG that is either a command NAME or a fn value;
+# `as_fn`/`as_fn2` normalise the two. The payoff: these rebuild the Layer-1 word
+# ops — `map flip_bit bits` = word_not, `foldl and true bools` = and_all.
 # ═════════════════════════════════════════════════════════════════════════════
 
 FN_ID='printf %s "$1"'                              # identity as a fn value
 
-apply   () { local __f="$1" __x="$2"; set -- "$__x"; eval "$__f"; }   # f(x)
+apply   () { local __f="$1" __x="$2"; set -- "$__x"; eval "$__f"; }              # f(x)
+apply2  () { local __f="$1" __a="$2" __b="$3"; set -- "$__a" "$__b"; eval "$__f"; }  # f(a,b)
 lift    () { printf '%s "$1"' "$1"; }               # a command NAME → a fn value
-compose () { printf 'apply %q "$(apply %q "$1")"' "$1" "$2"; }        # (f ∘ g)(x) = f(g(x))
+compose () { printf 'apply %q "$(apply %q "$1")"' "$1" "$2"; }                   # (f ∘ g)(x) = f(g(x))
 
-foldr ()
-{
-  # foldr COMBINER ZERO ELEM…  — COMBINER is a bash function of two args.
-  local c="$1" acc="$2"; shift 2
-  local -a xs=("$@"); local i
-  for (( i=${#xs[@]}-1; i>=0; i-- )); do acc=$("$c" "${xs[i]}" "$acc"); done
+# Normalise a function argument: a fn value (mentions $1/$2) is used as-is; a bare
+# command name is wrapped so it reads its argument(s) positionally.
+as_fn   () { case "$1" in *'$1'*)        printf '%s' "$1" ;; *) printf '%s "$1"' "$1" ;; esac; }
+as_fn2  () { case "$1" in *'$1'*|*'$2'*) printf '%s' "$1" ;; *) printf '%s "$1" "$2"' "$1" ;; esac; }
+
+# Scheme-style list primitives (space-separated word lists).
+lnull   () { set -- $1; [ $# -eq 0 ]; }
+lhead   () { set -- $1; printf '%s' "$1"; }
+ltail   () { set -- $1; shift; echo "$*"; }
+llength () { set -- $1; echo $#; }
+
+map () {                                  # map FN list   (FN unary; command or fn value)
+  local f res="" e; f=$(as_fn "$1")
+  for e in $2; do res+=" $(apply "$f" "$e")"; done
+  echo "${res# }"
+}
+
+mapcar () {                               # recursive (Scheme) twin of map
+  local f="$1" list="$2" h t
+  lnull "$list" && return 0
+  h=$(apply "$(as_fn "$f")" "$(lhead "$list")")
+  t=$(mapcar "$f" "$(ltail "$list")")
+  if [ -z "$t" ]; then printf '%s\n' "$h"; else printf '%s %s\n' "$h" "$t"; fi
+}
+
+filter () {                               # filter PRED list  (PRED echoes "true"/"false")
+  local p res="" e; p=$(as_fn "$1")
+  for e in $2; do [ "$(apply "$p" "$e")" = true ] && res+=" $e"; done
+  echo "${res# }"
+}
+
+foldl () {                                # foldl F acc list  (F binary; command or fn value)
+  local f acc="$2" e; f=$(as_fn2 "$1")
+  for e in $3; do acc=$(apply2 "$f" "$acc" "$e"); done
   printf '%s' "$acc"
+}
+
+foldr () {                                # foldr F end list  (right fold)
+  local f="$1" end="$2" list="$3" cf h rest
+  lnull "$list" && { printf '%s' "$end"; return; }
+  cf=$(as_fn2 "$f"); h=$(lhead "$list"); rest=$(foldr "$f" "$end" "$(ltail "$list")")
+  apply2 "$cf" "$h" "$rest"
 }
 
 
@@ -160,12 +204,14 @@ foldr ()
 # Church number build a bit-string by self-composition — number reaching the gates.
 # ═════════════════════════════════════════════════════════════════════════════
 
-# n-fold composition of f  =  foldr compose FN_ID [f, f, …, f]  (n copies of f).
+# n-fold composition of f: fold `compose` over n copies of f, starting at FN_ID.
+# (Uses its own loop rather than the list-`foldr` above, because fn values contain
+# spaces and so can't ride in a space-separated list.)
 church_iter ()
 {
-  local n="$1" f="$2" i; local -a fs=()
-  for ((i=0; i<n; i++)); do fs+=("$f"); done
-  foldr compose "$FN_ID" "${fs[@]}"
+  local n="$1" f="$2" acc="$FN_ID" i
+  for ((i=0; i<n; i++)); do acc=$(compose "$f" "$acc"); done
+  printf '%s' "$acc"
 }
 
 int_to_church () { printf 'church_iter %s "$1"' "$1"; }    # numeral n = λf. (f composed n times)

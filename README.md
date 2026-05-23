@@ -265,7 +265,7 @@ mod_pow 2 10 1000                  # 24
 mod_add_bits4 12 11                # 7   (= 23 mod 16, computed by the 4-bit adder)
 ```
 
-These do arithmetic by *counting through the gates*, so they're intentionally slow and kept out of the core; their own suite is `test-alt-arithmetic.sh` (63 passing).
+These do arithmetic by *counting through the gates*, so they're intentionally slow and kept out of the core; their own suite is `test-alt-arithmetic.sh` (78 passing).
 
 ## Tests
 

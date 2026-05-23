@@ -13,7 +13,7 @@ Boolean layer so you can watch foundations touch hardware.
 
 ```bash
 source ./alt-arithmetic.sh   # pulls in boolean-funcs-new.sh automatically
-bash test-alt-arithmetic.sh  # 63 passed, 0 failed  (~10s — see "speed" below)
+bash test-alt-arithmetic.sh  # 78 passed, 0 failed  (~10s — see "speed" below)
 ```
 
 > **A note on speed.** These models do arithmetic by *counting* — and the count
@@ -80,19 +80,31 @@ and composition becomes string-building:
 | combinator | meaning | |
 |---|---|---|
 | `FN_ID` | identity | `λx. x` |
-| `apply f x` | application | `f(x)` |
+| `apply f x` / `apply2 f a b` | application | `f(x)` / `f(a,b)` |
 | `lift name` | command → fn value | wrap a unary command as `name "$1"` |
 | `compose f g` | composition | `λx. f(g(x))` |
-| `foldr c z xs…` | right fold | `c x₁ (c x₂ (… (c xₙ z)))` |
+| `lnull`/`lhead`/`ltail`/`llength` | list primitives | over space-separated atoms |
+| `map`/`mapcar f xs` | map (iterative/recursive) | a unary `f` over a list |
+| `filter pred xs` | filter | keep atoms where `pred` echoes `true` |
+| `foldl`/`foldr f z xs` | left/right fold | with a binary `f` |
+
+`map`/`fold` take a function argument that is **either a command name or a fn
+value** (`as_fn`/`as_fn2` normalise the two).
 
 ```bash
-apply   "$(compose "$INC" "$DBL")" 5         # 11   (inc∘double: 2·5+1)
-foldr   compose "$FN_ID" "$INC" "$INC" "$INC"  # the fn "+3", as a composition
+apply  "$(compose "$INC" "$DBL")" 5    # 11   (inc∘double: 2·5+1)
+map    "$SQ" "1 2 3 4 5"               # 1 4 9 16 25            (SQ = 'echo $(($1*$1))')
+foldl  'echo $(($1+$2))' 0 "1 2 3 4 5" # 15                    (left fold = sum)
+foldr  'echo $(($1-$2))' 0 "1 2 3"     # 2  vs foldl's -6      (right vs left)
+
+# the payoff — the list combinators rebuild the Layer-1 word ops:
+map   "$(lift flip_bit)" "1 0 1 1 0"   # 0 1 0 0 1   ==  word_not "1 0 1 1 0"
+foldl and true "true true false"       # false       ==  and_all  (AND-reduce)
 ```
 
-A Church numeral is then literally `n`-fold composition — `foldr compose FN_ID`
-over `n` copies of `f` — and every operation is the textbook λ-identity, expressed
-with those combinators (no stored integers anywhere; numbers really are composition):
+A Church numeral is then literally `n`-fold composition — fold `compose` over `n`
+copies of `f` — and every operation is the textbook λ-identity, expressed with
+those combinators (no stored integers anywhere; numbers really are composition):
 
 ```
 succ n   = λf. f ∘ (n f)
@@ -111,10 +123,12 @@ apply "$(apply "$(int_to_church 5)" 'printf "%s*" "$1"')" ""   # *****
 bits_to_int "$(church_to_bits 5)"   # 5  ← numeral 5 composes the Layer-1 inc circuit
 ```
 
-Combinator layer: `FN_ID` `apply` `lift` `compose` `foldr`. Church functions:
-`church_iter` `church_zero` `church_one` `church_succ` `church_plus` `church_mult`
-`church_pow` `church_is_zero`, bridges `int_to_church` / `church_to_int` /
-`church_to_bits`. (Numerals are fn-value strings — read them with `church_to_int`.)
+Combinator layer: `FN_ID` `apply` `apply2` `lift` `compose` `as_fn`/`as_fn2`;
+list toolkit `lnull` `lhead` `ltail` `llength` `map` `mapcar` `filter` `foldl`
+`foldr`. Church functions: `church_iter` `church_zero` `church_one` `church_succ`
+`church_plus` `church_mult` `church_pow` `church_is_zero`, bridges `int_to_church`
+/ `church_to_int` / `church_to_bits`. (Numerals are fn-value strings — read them
+with `church_to_int`.)
 
 > Because composing eval-strings nests their escaping, numeral *size* grows with
 > composition depth — fine for the small values here; keep it modest.

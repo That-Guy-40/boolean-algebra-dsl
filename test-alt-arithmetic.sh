@@ -69,13 +69,35 @@ check_str "3 − 5 ≡ 62 (mod 64)" "62" "$(psub 3 5)"
 cn () { church_to_int "$1"; }
 ci () { int_to_church "$1"; }
 
-section "Function-application machinery (apply / compose / foldr)"
+section "Function-application machinery (apply / apply2 / compose / lift)"
 INC1='echo $(( $1 + 1 ))'; DBL='echo $(( $1 * 2 ))'
 check_str "apply (+1) 5 = 6"            "6"  "$(apply "$INC1" 5)"
+check_str "apply2 (a+b) 3 4 = 7"        "7"  "$(apply2 'echo $(($1+$2))' 3 4)"
 check_str "compose (+1) (×2) @ 5 = 11"  "11" "$(apply "$(compose "$INC1" "$DBL")" 5)"   # 2*5+1
 check_str "compose (×2) (+1) @ 5 = 12"  "12" "$(apply "$(compose "$DBL" "$INC1")" 5)"   # (5+1)*2
-check_str "foldr compose ID [+1×3] @10" "13" "$(apply "$(foldr compose "$FN_ID" "$INC1" "$INC1" "$INC1")" 10)"
+check_str "deep compose ((+1)∘(+1)∘(×2)) @ 5 = 12" "12" "$(apply "$(compose "$INC1" "$(compose "$INC1" "$DBL")")" 5)"
 check_str "lift inc then apply @ bits3" "4" "$(bits_to_int "$(apply "$(lift inc)" "$(int_to_bits 3 4)")")"
+
+section "List combinators (lhead/ltail, map, mapcar, filter, foldl, foldr)"
+check_str "lhead '3 1 4'"  "3"      "$(lhead '3 1 4')"
+check_str "ltail '3 1 4'"  "1 4"    "$(ltail '3 1 4')"
+check_str "llength '3 1 4'" "3"     "$(llength '3 1 4')"
+check_str "lnull '' "      "yes"    "$(lnull '' && echo yes || echo no)"
+SQ='echo $(($1*$1))'
+check_str "map square"           "1 4 9 16 25" "$(map "$SQ" '1 2 3 4 5')"
+check_str "mapcar square (recur)" "1 4 9 16 25" "$(mapcar "$SQ" '1 2 3 4 5')"
+check_str "foldl + 0 (sum)"      "15" "$(foldl 'echo $(($1+$2))' 0 '1 2 3 4 5')"
+check_str "foldl * 1 (product)"  "24" "$(foldl 'echo $(($1*$2))' 1 '1 2 3 4')"
+check_str "foldl − 0 = ((0-1)-2)-3 = -6" "-6" "$(foldl 'echo $(($1-$2))' 0 '1 2 3')"
+check_str "foldr − 0 = 1-(2-(3-0)) = 2"  "2"  "$(foldr 'echo $(($1-$2))' 0 '1 2 3')"
+EVEN='if (( $1 % 2 == 0 )); then echo true; else echo false; fi'
+check_str "filter even"          "2 4 6" "$(filter "$EVEN" '1 2 3 4 5 6')"
+
+section "List combinators reconstruct the Layer-1 word ops"
+BITS='1 0 1 1 0'
+check_str "map flip_bit  ==  word_not"      "$(word_not "$BITS")" "$(map "$(lift flip_bit)" "$BITS")"
+check_str "foldl and (all set)  = and_all"  "true"  "$(foldl and true 'true true true')"
+check_str "foldl and (a gap)    = and_all"  "false" "$(foldl and true 'true false true')"
 
 section "Church numerals (number IS n-fold composition)"
 check_str "to_int(zero) = 0"           "0" "$(cn "$(church_zero)")"
