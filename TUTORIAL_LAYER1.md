@@ -489,7 +489,9 @@ it until it stops surprising you.
 
 ---
 
-*Next stop, if you're curious: Layers 2 and 3 leave yes/no behind and do the same
-"build everything from one tiny piece" trick, but with **continuous** math — real
-numbers, `exp`, `ln`, sine, square roots. See `OVERVIEW.md`. The spirit is
-identical: one humble operator, stacked cleverly, becomes a whole world.*
+*Next stop, if you're curious: **[`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md)** leaves
+yes/no behind and pulls the exact same "build everything from one tiny piece" trick,
+but with **continuous** math — real numbers, `exp`, `ln`, sine, square roots — using
+a single operator called `eml`. (For the full technical reference across all three
+layers, see `OVERVIEW.md`.) The spirit is identical: one humble piece, stacked
+cleverly, becomes a whole world.*

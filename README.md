@@ -2,7 +2,7 @@
 
 A pure-Bash library for Boolean logic and continuous mathematics, built from the ground up in three layers — each one derived entirely from the layer below it.
 
-> **New to this? Start here →** [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md) is a plain-English, no-math walkthrough that builds the whole bottom layer from scratch — yes/no switches → gates → binary → a working calculator chip. If you're not a math person, read that first.
+> **New to this? Start here →** two plain-English, no-math walkthroughs build the project from the ground up: [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md) (yes/no switches → gates → binary → a working calculator chip) and [`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md) (one math operator, `eml`, rebuilds the whole calculator keypad — add, multiply, division, even sine). If you're not a math person, read those first.
 
 ```
 ┌─────────────────────────────────────────────┐
