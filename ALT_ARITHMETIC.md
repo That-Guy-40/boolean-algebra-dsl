@@ -13,7 +13,7 @@ Boolean layer so you can watch foundations touch hardware.
 
 ```bash
 source ./alt-arithmetic.sh   # pulls in boolean-funcs-new.sh automatically
-bash test-alt-arithmetic.sh  # 56 passed, 0 failed  (~10s — see "speed" below)
+bash test-alt-arithmetic.sh  # 63 passed, 0 failed  (~10s — see "speed" below)
 ```
 
 > **A note on speed.** These models do arithmetic by *counting* — and the count
@@ -63,41 +63,61 @@ Natural subtraction is only defined for `N1 ≥ N2`; going below zero **wraps**
 
 ---
 
-## 2. Church numerals — *number = repeated application*
+## 2. Church numerals — *number = iterated composition*
 
-Alonzo Church's lambda-calculus encoding: a number `n` *is* a function that
-applies some other function `f` to a value `x` exactly `n` times. `0` does nothing,
-`3` does `f` three times. Numbers aren't things you store — they're **behaviours**.
+Alonzo Church's lambda-calculus encoding: a number `n` *is* the function "compose
+`f` with itself `n` times." `0 = λf x. x`, `1 = λf x. f x`, `n = λf x. fⁿ x`.
+Numbers aren't things you store — they're **behaviours**, and that behaviour is
+composition.
 
-True closure-based numerals aren't expressible in bash (functions don't survive
-command-substitution subshells), so a numeral is realised as a repetition count —
-but used **strictly as an iterator**, never as an operand of `+` or `*`. Successor
-(`+1`) is the only arithmetic primitive; `add`/`mult`/`expt` are pure composition
-of iteration:
+To do this honestly we first build a **function-application machinery** — a tiny
+combinator layer — because Church numerals are pure higher-order functions. Bash
+has no closures that survive a command-substitution subshell, so a *function value*
+is represented as a **string of bash code** that reads its argument from `$1` and
+echoes its result. Strings pass through `$(…)` unharmed, so functions become data
+and composition becomes string-building:
 
-```
-add M N = apply succ, N times, to M
-mul M N = apply (+M),  N times, to 0
-exp B E = apply (×B),  E times, to 1
-```
-
-The higher-order heart survives: the central combinator `church_apply N F X`
-iterates **any** unary function — including non-arithmetic ones, and including the
-Layer-1 `inc` circuit, which is how a Church number reaches down and drives the
-gates.
+| combinator | meaning | |
+|---|---|---|
+| `FN_ID` | identity | `λx. x` |
+| `apply f x` | application | `f(x)` |
+| `lift name` | command → fn value | wrap a unary command as `name "$1"` |
+| `compose f g` | composition | `λx. f(g(x))` |
+| `foldr c z xs…` | right fold | `c x₁ (c x₂ (… (c xₙ z)))` |
 
 ```bash
-church_apply 5 church_succ 0     # 5      (apply +1 five times to 0)
-church_apply 5 star ""           # *****  (star() appends "*": number as pure repetition)
-church_add  2 3                  # 5
-church_mult 3 4                  # 12
-church_expt 2 5                  # 32
-bits_to_int "$(church_to_bits 5)"  # 5    ← the numeral drove Layer-1 inc to build bits
+apply   "$(compose "$INC" "$DBL")" 5         # 11   (inc∘double: 2·5+1)
+foldr   compose "$FN_ID" "$INC" "$INC" "$INC"  # the fn "+3", as a composition
 ```
 
-Functions: `church_zero` `church_one` `church_succ` `church_is_zero`
-`church_apply` `church_add` `church_mult` `church_expt`, bridges
-`int_to_church` / `church_to_int` / `church_to_bits`.
+A Church numeral is then literally `n`-fold composition — `foldr compose FN_ID`
+over `n` copies of `f` — and every operation is the textbook λ-identity, expressed
+with those combinators (no stored integers anywhere; numbers really are composition):
+
+```
+succ n   = λf. f ∘ (n f)
+plus m n = λf. (m f) ∘ (n f)
+mult m n = λf. m (n f)
+pow  b e = e b                 # b^e: apply the numeral e to b
+```
+
+```bash
+church_to_int "$(church_plus "$(int_to_church 2)" "$(int_to_church 3)")"   # 5
+church_to_int "$(church_mult "$(int_to_church 3)" "$(int_to_church 4)")"   # 12
+church_to_int "$(church_pow  "$(int_to_church 2)" "$(int_to_church 5)")"   # 32
+
+# the higher-order heart: the SAME numeral iterates ANY function value
+apply "$(apply "$(int_to_church 5)" 'printf "%s*" "$1"')" ""   # *****
+bits_to_int "$(church_to_bits 5)"   # 5  ← numeral 5 composes the Layer-1 inc circuit
+```
+
+Combinator layer: `FN_ID` `apply` `lift` `compose` `foldr`. Church functions:
+`church_iter` `church_zero` `church_one` `church_succ` `church_plus` `church_mult`
+`church_pow` `church_is_zero`, bridges `int_to_church` / `church_to_int` /
+`church_to_bits`. (Numerals are fn-value strings — read them with `church_to_int`.)
+
+> Because composing eval-strings nests their escaping, numeral *size* grows with
+> composition depth — fine for the small values here; keep it modest.
 
 ---
 

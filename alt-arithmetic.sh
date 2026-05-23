@@ -112,75 +112,90 @@ peano_expt ()
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# CHURCH NUMERALS  (number as repeated application)
+# FUNCTION-APPLICATION MACHINERY  (a tiny combinator layer)
 #
-# Alonzo Church's encoding from the lambda calculus: a number n IS a function
-# that, given any function f and a starting value x, applies f to x exactly n
-# times.  0 = "do nothing", 1 = "do f once", 3 = "do f three times", etc. Numbers
-# aren't things you store — they're *behaviours*.
+# Church numerals are pure higher-order functions, so first we need to treat
+# functions as values. Bash has no closures that survive a command-substitution
+# subshell — so a "fn value" here is a STRING of bash code that reads its argument
+# from $1 and echoes its result. Strings pass through `$(…)` unharmed, so we can
+# build, compose, and store functions as data. Composition is just string-building.
 #
-# True closure-based numerals can't be expressed in bash (no first-class
-# functions/closures that survive command substitution). So we realise a numeral
-# as a repetition count, but treat it strictly as an ITERATOR: it is only ever
-# used to drive `apply f n times` — never as an operand of + or *. The successor
-# (+1) is the sole arithmetic primitive; add / mult / expt are built purely by
-# composing iteration, mirroring the lambda-calculus identities:
-#       add M N = apply succ, N times, to M
-#       mul M N = apply (+M),  N times, to 0
-#       exp B E = apply (×B),  E times, to 1
-# The higher-order heart survives intact: `church_apply` will iterate ANY unary
-# function — including the Layer-1 `inc` circuit (see church_to_bits), which is
-# how a Church numeral reaches down and drives the gates.
+#   FN_ID            identity              λx. x
+#   apply  f x       application           f(x)
+#   lift   name      command  → fn value   wrap a unary command so it takes $1
+#   compose f g      composition           λx. f(g(x))
+#   foldr  c z xs…   right fold            c x1 (c x2 (… (c xn z)))
 # ═════════════════════════════════════════════════════════════════════════════
 
-church_zero    () { echo 0; }
-church_one     () { echo 1; }
-church_succ    () { echo $(( $1 + 1 )); }                 # the one arithmetic primitive
-church_is_zero () { if [ "$1" -eq 0 ]; then echo true; true; else echo false; false; fi; }
+FN_ID='printf %s "$1"'                              # identity as a fn value
 
-# THE combinator — a Church numeral in action: apply command F to X, n times.
-church_apply ()
-{
-  # church_apply N F X  ->  F(F(…F(X)…)), n times.  F is any unary command.
-  local n="$1" f="$2" x="$3" i
-  for ((i=0; i<n; i++)); do x=$("$f" "$x"); done
-  printf '%s' "$x"
-}
+apply   () { local __f="$1" __x="$2"; set -- "$__x"; eval "$__f"; }   # f(x)
+lift    () { printf '%s "$1"' "$1"; }               # a command NAME → a fn value
+compose () { printf 'apply %q "$(apply %q "$1")"' "$1" "$2"; }        # (f ∘ g)(x) = f(g(x))
 
-church_add ()
+foldr ()
 {
-  # M + N = apply the successor to M, N times.
-  church_apply "$2" church_succ "$1"
-}
-
-church_mult ()
-{
-  # M × N = apply "+M" to 0, N times. (Repeated addition; no * on the numerals.)
-  local M="$1" N="$2" acc i; acc=$(church_zero)
-  for ((i=0; i<N; i++)); do acc=$(church_add "$M" "$acc"); done
+  # foldr COMBINER ZERO ELEM…  — COMBINER is a bash function of two args.
+  local c="$1" acc="$2"; shift 2
+  local -a xs=("$@"); local i
+  for (( i=${#xs[@]}-1; i>=0; i-- )); do acc=$("$c" "${xs[i]}" "$acc"); done
   printf '%s' "$acc"
 }
 
-church_expt ()
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CHURCH NUMERALS  (number = iterated composition — the canonical encoding)
+#
+# Alonzo Church's lambda calculus: a number n IS the function "compose f with
+# itself n times".  0 = λf x. x ,  1 = λf x. f x ,  n = λf x. fⁿ x.  A numeral is
+# therefore a fn value (a lam) whose argument is another fn value f; applying it
+# to f yields the fn "fⁿ", and applying that to x gives fⁿ(x). Every operation is
+# the textbook lambda-calculus identity, expressed with the combinators above:
+#       succ n   = λf. f ∘ (n f)
+#       plus m n = λf. (m f) ∘ (n f)
+#       mult m n = λf. m (n f)
+#       pow  b e = e b                       (b^e: apply the numeral e to b)
+# Nothing is a stored integer here — numbers really are composition. The numeral
+# can iterate ANY fn value, so handing it the Layer-1 `inc` (lifted) makes a
+# Church number build a bit-string by self-composition — number reaching the gates.
+# ═════════════════════════════════════════════════════════════════════════════
+
+# n-fold composition of f  =  foldr compose FN_ID [f, f, …, f]  (n copies of f).
+church_iter ()
 {
-  # B ^ E = apply "×B" to 1, E times. (Repeated multiplication.)
-  local B="$1" E="$2" acc i; acc=$(church_one)
-  for ((i=0; i<E; i++)); do acc=$(church_mult "$B" "$acc"); done
-  printf '%s' "$acc"
+  local n="$1" f="$2" i; local -a fs=()
+  for ((i=0; i<n; i++)); do fs+=("$f"); done
+  foldr compose "$FN_ID" "${fs[@]}"
 }
 
-# Bridges. The carrier already is the count, so to/from int is the identity; the
-# interesting bridge is church_to_bits, which feeds the numeral the Layer-1 +1.
-church_to_int  () { printf '%s' "$1"; }
-int_to_church  () { printf '%s' "$1"; }
-church_to_bits () { church_apply "$1" inc "$(int_to_bits 0 "${2:-8}")"; }   # iterate the gate-level +1
+int_to_church () { printf 'church_iter %s "$1"' "$1"; }    # numeral n = λf. (f composed n times)
+church_zero   () { int_to_church 0; }
+church_one    () { int_to_church 1; }
 
-# Church testing:
-#   church_apply 5 church_succ 0     # 5   (apply +1 five times to 0)
-#   church_add  2 3                  # 5
-#   church_mult 3 4                  # 12
-#   church_expt 2 5                  # 32
-#   bits_to_int "$(church_to_bits 5)"  # 5   (the numeral drove Layer-1 inc)
+church_succ () { local n="$1"; printf 'compose "$1" "$(apply %q "$1")"' "$n"; }                          # λf. f ∘ (n f)
+church_plus () { local m="$1" n="$2"; printf 'compose "$(apply %q "$1")" "$(apply %q "$1")"' "$m" "$n"; }  # λf. (m f) ∘ (n f)
+church_mult () { local m="$1" n="$2"; printf 'apply %q "$(apply %q "$1")"' "$m" "$n"; }                  # λf. m (n f)
+church_pow  () { apply "$2" "$1"; }                                                                       # b^e = e b
+
+# is-zero, canonically:  n (const false) true  →  true only when n applies const
+# zero times (i.e. n = 0).  Takes a numeral; echoes true/false.
+__const_false='printf false'
+church_is_zero () { apply "$(apply "$1" "$__const_false")" true; }
+
+# ── bridges ──────────────────────────────────────────────────────────────────
+__intsucc='echo $(( $1 + 1 ))'
+church_to_int  () { apply "$(apply "$1" "$__intsucc")" 0; }     # numeral applied to (+1) then 0
+# church_to_bits takes a plain int for convenience: the numeral composes the
+# Layer-1 `inc` circuit, building the LSB-first bit-string by self-iteration.
+church_to_bits () { local num W="${2:-8}"; num=$(int_to_church "$1"); apply "$(apply "$num" "$(lift inc)")" "$(int_to_bits 0 "$W")"; }
+
+# Church testing (numerals are fn-value strings; use the bridges to read them):
+#   church_to_int "$(int_to_church 5)"                                # 5
+#   church_to_int "$(church_plus "$(int_to_church 2)" "$(int_to_church 3)")"  # 5
+#   church_to_int "$(church_mult "$(int_to_church 3)" "$(int_to_church 4)")"  # 12
+#   church_to_int "$(church_pow  "$(int_to_church 2)" "$(int_to_church 5)")"  # 32
+#   bits_to_int "$(church_to_bits 5)"                                 # 5  (numeral drove inc)
+#   apply "$(compose "$(lift inc)" "$(lift inc)")" "$(int_to_bits 3 4)"  # 3+2 via composed gates
 
 
 # ═════════════════════════════════════════════════════════════════════════════

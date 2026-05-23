@@ -63,25 +63,43 @@ section "Peano subtraction below zero wraps (mod 2^W) — the modular tie-in"
 check_str "3 − 5 ≡ 62 (mod 64)" "62" "$(psub 3 5)"
 
 # ═══════════════════════════════════════════════════════════════════════════
-# CHURCH NUMERALS  (number as repeated application)
+# CHURCH NUMERALS  (number = iterated composition, via the combinator layer)
 # ═══════════════════════════════════════════════════════════════════════════
-section "Church primitives & the iterator combinator"
-check_str "succ(succ(succ 0)) = 3" "3" "$(church_succ "$(church_succ "$(church_succ "$(church_zero)")")")"
-check_str "is_zero(0) = true"  "true"  "$(church_is_zero 0)"
-check_str "is_zero(3) = false" "false" "$(church_is_zero 3)"
-check_str "apply +1 five times to 0 = 5" "5" "$(church_apply 5 church_succ 0)"
-check_str "apply '*' five times = *****" "*****" "$(__star () { printf '%s*' "$1"; }; church_apply 5 __star "")"
+# decimal-in / decimal-out wrappers over the canonical (fn-value) numerals
+cn () { church_to_int "$1"; }
+ci () { int_to_church "$1"; }
 
-section "Church arithmetic (built only from succ + iteration)"
-check_str "add 2 3 = 5"   "5"  "$(church_add 2 3)"
-check_str "add 0 4 = 4"   "4"  "$(church_add 0 4)"
-check_str "mult 3 4 = 12" "12" "$(church_mult 3 4)"
-check_str "mult 5 0 = 0"  "0"  "$(church_mult 5 0)"
-check_str "expt 2 5 = 32" "32" "$(church_expt 2 5)"
-check_str "expt 4 0 = 1"  "1"  "$(church_expt 4 0)"
+section "Function-application machinery (apply / compose / foldr)"
+INC1='echo $(( $1 + 1 ))'; DBL='echo $(( $1 * 2 ))'
+check_str "apply (+1) 5 = 6"            "6"  "$(apply "$INC1" 5)"
+check_str "compose (+1) (×2) @ 5 = 11"  "11" "$(apply "$(compose "$INC1" "$DBL")" 5)"   # 2*5+1
+check_str "compose (×2) (+1) @ 5 = 12"  "12" "$(apply "$(compose "$DBL" "$INC1")" 5)"   # (5+1)*2
+check_str "foldr compose ID [+1×3] @10" "13" "$(apply "$(foldr compose "$FN_ID" "$INC1" "$INC1" "$INC1")" 10)"
+check_str "lift inc then apply @ bits3" "4" "$(bits_to_int "$(apply "$(lift inc)" "$(int_to_bits 3 4)")")"
 
-section "Church cross-layer: a numeral drives the Layer-1 inc circuit"
-check_str "church 5 → bits → 5" "5" "$(bits_to_int "$(church_to_bits 5)")"
+section "Church numerals (number IS n-fold composition)"
+check_str "to_int(zero) = 0"           "0" "$(cn "$(church_zero)")"
+check_str "to_int(succ³ zero) = 3"     "3" "$(cn "$(church_succ "$(church_succ "$(church_succ "$(church_zero)")")")")"
+check_str "int 5 → church → int"       "5" "$(cn "$(ci 5)")"
+check_str "is_zero(0) = true"   "true"  "$(church_is_zero "$(ci 0)")"
+check_str "is_zero(3) = false"  "false" "$(church_is_zero "$(ci 3)")"
+
+section "Church arithmetic via the canonical λ-identities"
+check_str "plus 2 3 = 5"   "5"  "$(cn "$(church_plus "$(ci 2)" "$(ci 3)")")"
+check_str "plus 0 4 = 4"   "4"  "$(cn "$(church_plus "$(ci 0)" "$(ci 4)")")"
+check_str "mult 3 4 = 12"  "12" "$(cn "$(church_mult "$(ci 3)" "$(ci 4)")")"
+check_str "mult 5 0 = 0"   "0"  "$(cn "$(church_mult "$(ci 5)" "$(ci 0)")")"
+check_str "pow 2 5 = 32"   "32" "$(cn "$(church_pow "$(ci 2)" "$(ci 5)")")"
+check_str "pow 3 3 = 27"   "27" "$(cn "$(church_pow "$(ci 3)" "$(ci 3)")")"
+check_str "pow 4 0 = 1"    "1"  "$(cn "$(church_pow "$(ci 4)" "$(ci 0)")")"
+
+section "Church higher-order: the SAME numeral iterates any function"
+# Numeral 5 applied to a star-appender (a non-arithmetic fn value) → '*****'.
+STAR='printf "%s*" "$1"'
+check_str "5 applied to '*'-appender = *****" "*****" "$(apply "$(apply "$(ci 5)" "$STAR")" "")"
+
+section "Church cross-layer: a numeral composes the Layer-1 inc circuit"
+check_str "church 5 → bits → 5"   "5"  "$(bits_to_int "$(church_to_bits 5)")"
 check_str "church 10 → bits → 10" "10" "$(bits_to_int "$(church_to_bits 10)")"
 
 # ═══════════════════════════════════════════════════════════════════════════
