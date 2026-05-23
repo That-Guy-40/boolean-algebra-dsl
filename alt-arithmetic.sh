@@ -223,6 +223,37 @@ church_plus () { local m="$1" n="$2"; printf 'compose "$(apply %q "$1")" "$(appl
 church_mult () { local m="$1" n="$2"; printf 'apply %q "$(apply %q "$1")"' "$m" "$n"; }                  # λf. m (n f)
 church_pow  () { apply "$2" "$1"; }                                                                       # b^e = e b
 
+# ── Church booleans (binary selectors, used via apply2):  TRUE picks the first
+# argument, FALSE the second — so a boolean IS an if/then/else. ──
+CHURCH_TRUE='printf %s "$1"'      # λa b. a
+CHURCH_FALSE='printf %s "$2"'     # λa b. b
+church_if      () { apply2 "$1" "$2" "$3"; }                 # if cond then $2 else $3
+church_band    () { apply2 "$1" "$2" "$CHURCH_FALSE"; }      # p ∧ q = p ? q : FALSE
+church_bor     () { apply2 "$1" "$CHURCH_TRUE" "$2"; }       # p ∨ q = p ? TRUE : q
+church_bnot    () { apply2 "$1" "$CHURCH_FALSE" "$CHURCH_TRUE"; }
+church_to_bool () { apply2 "$1" true false; }                # read a Church bool → "true"/"false"
+
+# ── Church pairs:  pair a b = λs. s a b ;  car = pair TRUE ;  cdr = pair FALSE.
+# The selector s is handed both components and a boolean chooses which to keep. ──
+cons () { local a="$1" b="$2"; printf 'apply2 "$1" %q %q' "$a" "$b"; }
+car  () { apply "$1" "$CHURCH_TRUE"; }
+cdr  () { apply "$1" "$CHURCH_FALSE"; }
+
+# ── Predecessor — the famous one, via pairs. Step Φ:(a,b) → (b, succ b). Applying
+# Φ to (0,0) exactly n times yields (n−1, n); car gives n−1 (and pred 0 = 0). This
+# is what unlocks the rest of Church arithmetic: subtraction is then iterated pred. ──
+__PHI='cons "$(cdr "$1")" "$(church_succ "$(cdr "$1")")"'
+church_pred ()
+{
+  local num="$1" init
+  init=$(cons "$(church_zero)" "$(church_zero)")
+  car "$(apply "$(apply "$num" "$__PHI")" "$init")"     # car( Φⁿ (0,0) )
+}
+
+# Truncated subtraction (monus):  m − n = apply pred to m, n times (floors at 0).
+__PRED='church_pred "$1"'
+church_sub () { local m="$1" n="$2"; apply "$(apply "$n" "$__PRED")" "$m"; }
+
 # is-zero, canonically:  n (const false) true  →  true only when n applies const
 # zero times (i.e. n = 0).  Takes a numeral; echoes true/false.
 __const_false='printf false'

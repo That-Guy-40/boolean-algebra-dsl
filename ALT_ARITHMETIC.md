@@ -13,7 +13,7 @@ Boolean layer so you can watch foundations touch hardware.
 
 ```bash
 source ./alt-arithmetic.sh   # pulls in boolean-funcs-new.sh automatically
-bash test-alt-arithmetic.sh  # 78 passed, 0 failed  (~10s — see "speed" below)
+bash test-alt-arithmetic.sh  # 99 passed, 0 failed  (~10s — see "speed" below)
 ```
 
 > **A note on speed.** These models do arithmetic by *counting* — and the count
@@ -123,12 +123,29 @@ apply "$(apply "$(int_to_church 5)" 'printf "%s*" "$1"')" ""   # *****
 bits_to_int "$(church_to_bits 5)"   # 5  ← numeral 5 composes the Layer-1 inc circuit
 ```
 
+**Booleans, pairs, and the famous predecessor.** A Church *boolean* is a binary
+selector — `TRUE = λa b. a`, `FALSE = λa b. b` — so a boolean *is* an if/then/else.
+A *pair* is `λs. s a b` (hand both parts to a selector); `car`/`cdr` pass it `TRUE`
+/`FALSE`. Those unlock `pred` (subtract one), the one operation pure successor
+arithmetic can't do directly: iterate `(a,b) → (b, b+1)` over `(0,0)` `n` times and
+take the first component. Subtraction is then just iterated `pred` (truncated at 0):
+
+```bash
+church_if "$CHURCH_TRUE" yes no                       # yes
+church_to_bool "$(church_band "$CHURCH_TRUE" "$CHURCH_FALSE")"   # false
+church_to_int "$(car "$(cons "$(int_to_church 3)" "$(int_to_church 7)")")"  # 3
+church_to_int "$(church_pred "$(int_to_church 5)")"   # 4
+church_to_int "$(church_sub  "$(int_to_church 7)" "$(int_to_church 3)")"    # 4
+church_to_int "$(church_sub  "$(int_to_church 2)" "$(int_to_church 5)")"    # 0  (monus)
+```
+
 Combinator layer: `FN_ID` `apply` `apply2` `lift` `compose` `as_fn`/`as_fn2`;
 list toolkit `lnull` `lhead` `ltail` `llength` `map` `mapcar` `filter` `foldl`
-`foldr`. Church functions: `church_iter` `church_zero` `church_one` `church_succ`
-`church_plus` `church_mult` `church_pow` `church_is_zero`, bridges `int_to_church`
-/ `church_to_int` / `church_to_bits`. (Numerals are fn-value strings — read them
-with `church_to_int`.)
+`foldr`. Church: `church_iter` `church_zero/one/succ` `church_plus/mult/pow`
+`church_pred/sub` `church_is_zero`; booleans `CHURCH_TRUE/FALSE` `church_if`
+`church_band/bor/bnot` `church_to_bool`; pairs `cons/car/cdr`; bridges
+`int_to_church` / `church_to_int` / `church_to_bits`. (Numerals and booleans are
+fn-value strings — read them with `church_to_int` / `church_to_bool`.)
 
 > Because composing eval-strings nests their escaping, numeral *size* grows with
 > composition depth — fine for the small values here; keep it modest.

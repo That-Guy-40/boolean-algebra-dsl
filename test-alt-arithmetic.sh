@@ -115,6 +115,28 @@ check_str "pow 2 5 = 32"   "32" "$(cn "$(church_pow "$(ci 2)" "$(ci 5)")")"
 check_str "pow 3 3 = 27"   "27" "$(cn "$(church_pow "$(ci 3)" "$(ci 3)")")"
 check_str "pow 4 0 = 1"    "1"  "$(cn "$(church_pow "$(ci 4)" "$(ci 0)")")"
 
+section "Church booleans & if/and/or/not"
+check_str "if TRUE  → 1st" "yes" "$(church_if "$CHURCH_TRUE" yes no)"
+check_str "if FALSE → 2nd" "no"  "$(church_if "$CHURCH_FALSE" yes no)"
+check_str "and T F = false" "false" "$(church_to_bool "$(church_band "$CHURCH_TRUE" "$CHURCH_FALSE")")"
+check_str "and T T = true"  "true"  "$(church_to_bool "$(church_band "$CHURCH_TRUE" "$CHURCH_TRUE")")"
+check_str "or  T F = true"  "true"  "$(church_to_bool "$(church_bor  "$CHURCH_TRUE" "$CHURCH_FALSE")")"
+check_str "or  F F = false" "false" "$(church_to_bool "$(church_bor  "$CHURCH_FALSE" "$CHURCH_FALSE")")"
+check_str "not T = false"   "false" "$(church_to_bool "$(church_bnot "$CHURCH_TRUE")")"
+
+section "Church pairs (cons / car / cdr)"
+check_str "car(cons 3 7) = 3" "3" "$(cn "$(car "$(cons "$(ci 3)" "$(ci 7)")")")"
+check_str "cdr(cons 3 7) = 7" "7" "$(cn "$(cdr "$(cons "$(ci 3)" "$(ci 7)")")")"
+
+section "Church predecessor (via pairs) & truncated subtraction"
+for n in 0 1 2 3 4 6; do
+    check_str "pred $n" "$(( n>0 ? n-1 : 0 ))" "$(cn "$(church_pred "$(ci $n)")")"
+done
+for tc in "5 3" "7 2" "3 3" "2 5" "6 0" "9 4"; do
+    set -- $tc
+    check_str "sub $1 $2 (monus)" "$(( $1-$2 < 0 ? 0 : $1-$2 ))" "$(cn "$(church_sub "$(ci $1)" "$(ci $2)")")"
+done
+
 section "Church higher-order: the SAME numeral iterates any function"
 # Numeral 5 applied to a star-appender (a non-arithmetic fn value) → '*****'.
 STAR='printf "%s*" "$1"'
