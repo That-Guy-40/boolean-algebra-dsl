@@ -129,10 +129,15 @@ peano_expt ()
 #   map / mapcar f xs    map a unary f over a list (iterative / recursive)
 #   filter pred xs       keep atoms where pred echoes "true"
 #   foldl / foldr f z xs left / right fold with a binary f
+#   zipwith f xs ys      element-wise combine (length = shorter list)
+#   take/drop n xs       prefix / suffix;  take_while/until, drop_while/until pred xs
+#   lrange a b           inclusive int range;  lreverse xs;  iterate f x n
+#   any / all pred xs    exists / forall over a predicate
 #
-# map/fold accept a FUNCTION ARG that is either a command NAME or a fn value;
+# map/fold/etc. accept a FUNCTION ARG that is either a command NAME or a fn value;
 # `as_fn`/`as_fn2` normalise the two. The payoff: these rebuild the Layer-1 word
-# ops — `map flip_bit bits` = word_not, `foldl and true bools` = and_all.
+# ops — `map flip_bit bits` = word_not, `zipwith ne a b` = word_xor,
+# `foldl and true bools` = and_all, `all`/`any` = and_all/or_all.
 # ═════════════════════════════════════════════════════════════════════════════
 
 FN_ID='printf %s "$1"'                              # identity as a fn value
@@ -185,6 +190,55 @@ foldr () {                                # foldr F end list  (right fold)
   cf=$(as_fn2 "$f"); h=$(lhead "$list"); rest=$(foldr "$f" "$end" "$(ltail "$list")")
   apply2 "$cf" "$h" "$rest"
 }
+
+zipwith () {                              # zipwith F xs ys  (F binary; element-wise; len = min)
+  local f res="" i; f=$(as_fn2 "$1")
+  local -a A B; read -ra A <<< "$2"; read -ra B <<< "$3"
+  local n=${#A[@]}; [ ${#B[@]} -lt "$n" ] && n=${#B[@]}
+  for ((i=0; i<n; i++)); do res+=" $(apply2 "$f" "${A[i]}" "${B[i]}")"; done
+  echo "${res# }"
+}
+
+take () { local n="$1" res="" e i=0; for e in $2; do [ "$i" -ge "$n" ] && break; res+=" $e"; i=$((i+1)); done; echo "${res# }"; }
+drop () { local n="$1" res="" e i=0; for e in $2; do [ "$i" -ge "$n" ] && res+=" $e"; i=$((i+1)); done; echo "${res# }"; }
+
+take_while () {                           # longest prefix where PRED echoes true
+  local p res="" e; p=$(as_fn "$1")
+  for e in $2; do [ "$(apply "$p" "$e")" = true ] || break; res+=" $e"; done
+  echo "${res# }"
+}
+drop_while () {                           # the rest after take_while's prefix
+  local p res="" e dropping=1; p=$(as_fn "$1")
+  for e in $2; do
+    if [ "$dropping" = 1 ] && [ "$(apply "$p" "$e")" = true ]; then continue; fi
+    dropping=0; res+=" $e"
+  done
+  echo "${res# }"
+}
+take_until () {                           # prefix until PRED first becomes true (= take_while of ¬pred)
+  local p res="" e; p=$(as_fn "$1")
+  for e in $2; do [ "$(apply "$p" "$e")" = true ] && break; res+=" $e"; done
+  echo "${res# }"
+}
+drop_until () {                           # complement of take_until
+  local p res="" e dropping=1; p=$(as_fn "$1")
+  for e in $2; do
+    if [ "$dropping" = 1 ] && [ "$(apply "$p" "$e")" != true ]; then continue; fi
+    dropping=0; res+=" $e"
+  done
+  echo "${res# }"
+}
+
+lrange   () { local a="$1" b="$2" res="" i; for ((i=a; i<=b; i++)); do res+=" $i"; done; echo "${res# }"; }   # inclusive A..B
+lreverse () { local res="" e; for e in $1; do res="$e${res:+ }$res"; done; echo "$res"; }
+iterate  () {                             # iterate F x N -> N elements [x, f x, f(f x), …]
+  local f x="$2" n="$3" res="" i; f=$(as_fn "$1")
+  for ((i=0; i<n; i++)); do res+=" $x"; x=$(apply "$f" "$x"); done
+  echo "${res# }"
+}
+
+any () { local p e; p=$(as_fn "$1"); for e in $2; do [ "$(apply "$p" "$e")" = true ] && { echo true; return; }; done; echo false; }
+all () { local p e; p=$(as_fn "$1"); for e in $2; do [ "$(apply "$p" "$e")" = true ] || { echo false; return; }; done; echo true; }
 
 
 # ═════════════════════════════════════════════════════════════════════════════

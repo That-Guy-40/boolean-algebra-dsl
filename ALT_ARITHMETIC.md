@@ -13,7 +13,7 @@ Boolean layer so you can watch foundations touch hardware.
 
 ```bash
 source ./alt-arithmetic.sh   # pulls in boolean-funcs-new.sh automatically
-bash test-alt-arithmetic.sh  # 99 passed, 0 failed  (~10s — see "speed" below)
+bash test-alt-arithmetic.sh  # 122 passed, 0 failed  (~10s — see "speed" below)
 ```
 
 > **A note on speed.** These models do arithmetic by *counting* — and the count
@@ -87,19 +87,27 @@ and composition becomes string-building:
 | `map`/`mapcar f xs` | map (iterative/recursive) | a unary `f` over a list |
 | `filter pred xs` | filter | keep atoms where `pred` echoes `true` |
 | `foldl`/`foldr f z xs` | left/right fold | with a binary `f` |
+| `zipwith f xs ys` | element-wise combine | length = shorter list |
+| `take`/`drop n xs` | prefix / suffix | also `take_while`/`take_until`, `drop_while`/`drop_until pred xs` |
+| `lrange a b` / `lreverse` / `iterate f x n` | generators | range, reverse, `[x, f x, f²x, …]` |
+| `any`/`all pred xs` | exists / forall | over a predicate |
 
-`map`/`fold` take a function argument that is **either a command name or a fn
-value** (`as_fn`/`as_fn2` normalise the two).
+`map`/`fold`/etc. take a function argument that is **either a command name or a
+fn value** (`as_fn`/`as_fn2` normalise the two).
 
 ```bash
-apply  "$(compose "$INC" "$DBL")" 5    # 11   (inc∘double: 2·5+1)
-map    "$SQ" "1 2 3 4 5"               # 1 4 9 16 25            (SQ = 'echo $(($1*$1))')
-foldl  'echo $(($1+$2))' 0 "1 2 3 4 5" # 15                    (left fold = sum)
-foldr  'echo $(($1-$2))' 0 "1 2 3"     # 2  vs foldl's -6      (right vs left)
+apply   "$(compose "$INC" "$DBL")" 5    # 11   (inc∘double: 2·5+1)
+map     "$SQ" "1 2 3 4 5"               # 1 4 9 16 25            (SQ = 'echo $(($1*$1))')
+foldl   'echo $(($1+$2))' 0 "1 2 3 4 5" # 15                    (left fold = sum)
+foldr   'echo $(($1-$2))' 0 "1 2 3"     # 2  vs foldl's -6      (right vs left)
+zipwith 'echo $(($1+$2))' "1 2 3" "10 20 30"  # 11 22 33
+take_while "$LT4" "1 2 5 3"             # 1 2          iterate 'echo $(($1*2))' 1 5 → 1 2 4 8 16
 
 # the payoff — the list combinators rebuild the Layer-1 word ops:
-map   "$(lift flip_bit)" "1 0 1 1 0"   # 0 1 0 0 1   ==  word_not "1 0 1 1 0"
-foldl and true "true true false"       # false       ==  and_all  (AND-reduce)
+map     "$(lift flip_bit)" "1 0 1 1 0"  # 0 1 0 0 1   ==  word_not
+zipwith "$BXOR" "1 0 1 1" "1 1 0 1"     # 0 1 1 0     ==  word_xor   (BXOR bridges 0/1↔bool)
+foldl   and true "true true false"      # false       ==  and_all  (AND-reduce)
+all     "$IS1" "1 1 1 1"                # true        ==  and_all ;  any … == or_all
 ```
 
 A Church numeral is then literally `n`-fold composition — fold `compose` over `n`
@@ -141,7 +149,8 @@ church_to_int "$(church_sub  "$(int_to_church 2)" "$(int_to_church 5)")"    # 0 
 
 Combinator layer: `FN_ID` `apply` `apply2` `lift` `compose` `as_fn`/`as_fn2`;
 list toolkit `lnull` `lhead` `ltail` `llength` `map` `mapcar` `filter` `foldl`
-`foldr`. Church: `church_iter` `church_zero/one/succ` `church_plus/mult/pow`
+`foldr` `zipwith` `take`/`drop` `take_while`/`drop_while` `take_until`/`drop_until`
+`lrange` `lreverse` `iterate` `any`/`all`. Church: `church_iter` `church_zero/one/succ` `church_plus/mult/pow`
 `church_pred/sub` `church_is_zero`; booleans `CHURCH_TRUE/FALSE` `church_if`
 `church_band/bor/bnot` `church_to_bool`; pairs `cons/car/cdr`; bridges
 `int_to_church` / `church_to_int` / `church_to_bits`. (Numerals and booleans are

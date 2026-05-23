@@ -93,9 +93,41 @@ check_str "foldr − 0 = 1-(2-(3-0)) = 2"  "2"  "$(foldr 'echo $(($1-$2))' 0 '1 
 EVEN='if (( $1 % 2 == 0 )); then echo true; else echo false; fi'
 check_str "filter even"          "2 4 6" "$(filter "$EVEN" '1 2 3 4 5 6')"
 
+section "More list combinators (zipwith / take / drop / while / until / range / iterate)"
+check_str "zipwith + "        "11 22 33"   "$(zipwith 'echo $(($1+$2))' '1 2 3' '10 20 30')"
+check_str "zipwith * (min len)" "5 12"     "$(zipwith 'echo $(($1*$2))' '1 2 3 4' '5 6')"
+check_str "take 2"            "a b"        "$(take 2 'a b c d')"
+check_str "drop 2"            "c d"        "$(drop 2 'a b c d')"
+check_str "take 9 (over)"     "a b"        "$(take 9 'a b')"
+LT4='if (( $1 < 4 )); then echo true; else echo false; fi'
+check_str "take_while <4"     "1 2"        "$(take_while "$LT4" '1 2 5 3')"
+check_str "drop_while <4"     "5 3"        "$(drop_while "$LT4" '1 2 5 3')"
+check_str "take_until <4"     ""           "$(take_until "$LT4" '1 2 5 3')"
+check_str "drop_until <4"     "1 2 5 3"    "$(drop_until "$LT4" '1 2 5 3')"
+check_str "lrange 3 7"        "3 4 5 6 7"  "$(lrange 3 7)"
+check_str "lrange 5 2 (empty)" ""          "$(lrange 5 2)"
+check_str "lreverse"          "4 3 2 1"    "$(lreverse '1 2 3 4')"
+check_str "iterate *2 1 5"    "1 2 4 8 16" "$(iterate 'echo $(($1*2))' 1 5)"
+EVEN='if (( $1 % 2 == 0 )); then echo true; else echo false; fi'
+check_str "any even (none)"   "false"      "$(any "$EVEN" '1 3 5')"
+check_str "all even (all)"    "true"       "$(all "$EVEN" '2 4 6')"
+check_str "all even (empty)"  "true"       "$(all "$EVEN" '')"
+
 section "List combinators reconstruct the Layer-1 word ops"
-BITS='1 0 1 1 0'
-check_str "map flip_bit  ==  word_not"      "$(word_not "$BITS")" "$(map "$(lift flip_bit)" "$BITS")"
+A='1 0 1 1'; B='1 1 0 1'
+# the gates take true/false, so the bit-level combiners bridge 0/1 ↔ true/false
+BXOR='bool_to_bit "$(ne  "$(bit_to_bool "$1")" "$(bit_to_bool "$2")")"'
+BAND='bool_to_bit "$(and "$(bit_to_bool "$1")" "$(bit_to_bool "$2")")"'
+BOR='bool_to_bit  "$(or  "$(bit_to_bool "$1")" "$(bit_to_bool "$2")")"'
+IS1='if [ "$1" = 1 ]; then echo true; else echo false; fi'
+check_str "map flip_bit   == word_not" "$(word_not "$A")"    "$(map "$(lift flip_bit)" "$A")"
+check_str "zipwith xor    == word_xor" "$(word_xor "$A" "$B")" "$(zipwith "$BXOR" "$A" "$B")"
+check_str "zipwith and    == word_and" "$(word_and "$A" "$B")" "$(zipwith "$BAND" "$A" "$B")"
+check_str "zipwith or     == word_or"  "$(word_or  "$A" "$B")" "$(zipwith "$BOR"  "$A" "$B")"
+check_str "all (=1) bits  == and_all"  "$(and_all '1 1 1 1')" "$(all "$IS1" '1 1 1 1')"
+check_str "all (=1) w/gap == and_all"  "$(and_all '1 1 0 1')" "$(all "$IS1" '1 1 0 1')"
+check_str "any (=1) bits  == or_all"   "$(or_all  '0 0 1 0')" "$(any "$IS1" '0 0 1 0')"
+check_str "zipwith ne on true/false"   "false true true"      "$(zipwith ne 'true false true' 'true true false')"
 check_str "foldl and (all set)  = and_all"  "true"  "$(foldl and true 'true true true')"
 check_str "foldl and (a gap)    = and_all"  "false" "$(foldl and true 'true false true')"
 
