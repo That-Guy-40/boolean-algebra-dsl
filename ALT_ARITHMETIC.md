@@ -99,8 +99,11 @@ fn value** (`as_fn`/`as_fn2` normalise the two). The five core combinators
 (`FN_ID`/`apply`/`apply2`/`lift`/`compose`) live in `alt-arithmetic.sh` since the
 Church layer needs them; everything from `as_fn` down — the Scheme-style list
 toolkit — lives in **`list-processing-kit.sh`**, which `alt-arithmetic.sh` sources
-(so it's reusable on its own, and available alongside the arithmetic models). The
-kit is exercised in isolation by `test-list-processing-kit.sh` (50 passing).
+(making it available alongside the arithmetic models). The kit bundles its own copy
+of `apply`/`apply2`, so it is **fully standalone** — exercised in isolation by
+`test-list-processing-kit.sh` (50 passing). (`alt-arithmetic.sh` likewise keeps a
+local copy of `foldr` so `church_iter` folds `compose` without reaching into the
+kit.)
 
 ```bash
 apply   "$(compose "$INC" "$DBL")" 5    # 11   (inc∘double: 2·5+1)

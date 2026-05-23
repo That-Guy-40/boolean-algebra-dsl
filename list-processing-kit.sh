@@ -21,15 +21,20 @@
 #   lrange a b / lreverse xs / iterate f x n  generators
 #   any / all pred xs                       exists / forall over a predicate
 #
-# DEPENDENCY: the application combinators `apply` and `apply2` (a fn value applied
-# to one / two arguments). Those live in the combinator core of alt-arithmetic.sh,
-# which sources this file — so the kit is available alongside the arithmetic models.
-# (Sourced on its own, define apply/apply2 first.)
+# SELF-CONTAINED: the kit bundles the two application combinators it relies on
+# (`apply`, `apply2`) so it works when sourced on its own — no other file needed.
+# These are an exact copy of the combinator core in alt-arithmetic.sh; when that
+# file sources this kit the definitions are identical, so it is harmless.
 #
 # The payoff — these reconstruct the Layer-1 word ops from the other direction:
 #   map flip_bit bits      = word_not          zipwith <xor> a b = word_xor
 #   foldl and true bools   = and_all            all/any (=1?)     = and_all/or_all
 # ─────────────────────────────────────────────────────────────────────────────
+
+# Application combinators (duplicated from alt-arithmetic.sh's core, so the kit is
+# standalone). A "fn value" is bash code reading its argument(s) from $1 (and $2).
+apply  () { local __f="$1" __x="$2"; set -- "$__x"; eval "$__f"; }                    # f(x)
+apply2 () { local __f="$1" __a="$2" __b="$3"; set -- "$__a" "$__b"; eval "$__f"; }    # f(a, b)
 
 # Normalise a function argument: a fn value (mentions $1/$2) is used as-is; a bare
 # command name is wrapped so it reads its argument(s) positionally.

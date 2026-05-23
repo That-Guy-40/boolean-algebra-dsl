@@ -159,14 +159,25 @@ source "$(dirname "${BASH_SOURCE[0]}")/list-processing-kit.sh"
 # Church number build a bit-string by self-composition — number reaching the gates.
 # ═════════════════════════════════════════════════════════════════════════════
 
-# n-fold composition of f: fold `compose` over n copies of f, starting at FN_ID.
-# (Uses its own loop rather than the list-`foldr` above, because fn values contain
-# spaces and so can't ride in a space-separated list.)
+# A copy of the list kit's right fold, kept here so church_iter's fold is local to
+# this file (the kit is sourced too, where the definition is identical).
+foldr ()
+{
+  local f="$1" end="$2" list="$3" cf h rest
+  lnull "$list" && { printf '%s' "$end"; return; }
+  cf=$(as_fn2 "$f"); h=$(lhead "$list"); rest=$(foldr "$f" "$end" "$(ltail "$list")")
+  apply2 "$cf" "$h" "$rest"
+}
+
+# n-fold composition of f, as a right fold (replacing the old manual compose loop):
+# compose f onto the identity once per element of a length-n list. fn values hold
+# spaces so they can't be list atoms — but the COUNT list (lrange 1 n) can; the
+# combiner ignores each element and folds in one more f, threading the growing
+# composition as the accumulator.  foldr (λ_ acc. compose f acc) FN_ID [1..n] = fⁿ.
 church_iter ()
 {
-  local n="$1" f="$2" acc="$FN_ID" i
-  for ((i=0; i<n; i++)); do acc=$(compose "$f" "$acc"); done
-  printf '%s' "$acc"
+  local n="$1" f="$2"
+  foldr "compose $(printf '%q' "$f") \"\$2\"" "$FN_ID" "$(lrange 1 "$n")"
 }
 
 int_to_church () { printf 'church_iter %s "$1"' "$1"; }    # numeral n = λf. (f composed n times)

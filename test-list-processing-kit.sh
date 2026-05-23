@@ -1,14 +1,9 @@
 #!/bin/bash
 # Standalone tests for list-processing-kit.sh.
 #
-# The kit's only dependency is the application combinators apply/apply2 (normally
-# provided by alt-arithmetic.sh's combinator core). We supply just those here and
-# source ONLY the kit — so this exercises the kit in isolation, with no arithmetic
-# models and no Layer-1 gates. Fast: pure list processing, no subshelled circuits.
-
-# ── the kit's documented dependency (the combinator core, minimal) ──
-apply  () { local __f="$1" __x="$2"; set -- "$__x"; eval "$__f"; }
-apply2 () { local __f="$1" __a="$2" __b="$3"; set -- "$__a" "$__b"; eval "$__f"; }
+# The kit is self-contained (it bundles its own apply/apply2), so we source ONLY
+# the kit — no arithmetic models, no Layer-1 gates, nothing else. This proves it
+# stands alone. Fast: pure list processing, no subshelled circuits.
 
 source "$(dirname "${BASH_SOURCE[0]}")/list-processing-kit.sh"
 
