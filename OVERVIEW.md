@@ -559,7 +559,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 947 passed, 0 failed
+# 952 passed, 0 failed
 ```
 
 Coverage summary:
@@ -579,8 +579,8 @@ Coverage summary:
 | Multi-bit adders | `ripple_add4` exact bit patterns + decoded sums over 30 input pairs + carry-in; `ripple_add8` low→high nibble carry propagation, 8-bit overflow, carry-in |
 | Subtractors | `flip_bit` truth table; `ripple_sub4` / `ripple_sub8` signed two's-complement results (positive and negative) and borrow-flag (carry-out) semantics |
 | Comparators | `bit_to_bool`; `bits_eq` / `bits_gt` predicate exit codes; `compare4` over the full 8×8 grid and `compare8` over a 6×6 grid vs shell `-lt`/`-gt`; cascaded-priority edge cases (8 vs 7) |
-| EML | Base constructions; exp/ln mutual inverses; all five arithmetic ops; mul/div round-trips; **every op (`+`,`−`,`×`,`÷`,`neg`,`exp`,`ln`) pinned against plain `bc` arithmetic** — independent proof the `exp(x)−ln(y)` construction rebuilds ordinary math |
-| EML applications | `eml_pow_int` powers (vs `bc`'s `^`); `eml_recip` Newton reciprocal vs `eml_div` (incl. larger x with custom seeds); `eml_recip_auto` comparator-seeded reciprocal across power-of-two brackets, cross-checked against `bc`'s `1/x`; `eml_sin_taylor` vs `bc` sin, with term-count convergence |
+| EML | Base constructions; the `eml(x,y)` operator pinned directly to `bc`'s `e(x)−ln(y)`; exp/ln mutual inverses; all five arithmetic ops; mul/div round-trips; **every op (`+`,`−`,`×`,`÷`,`neg`,`exp`,`ln`) pinned against plain `bc` arithmetic** — independent proof the `exp(x)−ln(y)` construction rebuilds ordinary math. (The suite's `e` constant is `bc`'s `e(1)`, not `eml_e`, so the "= e" checks aren't circular.) |
+| EML applications | `eml_pow_int` powers (vs `bc`'s `^`); `eml_recip` Newton reciprocal vs both `eml_div` and `bc`'s `1/x` (incl. larger x with custom seeds); `eml_recip_auto` comparator-seeded reciprocal across power-of-two brackets, cross-checked against `bc`'s `1/x`; `eml_sin_taylor` vs `bc` sin, with term-count convergence |
 | Bit conversion | `int_to_bits` minimal and fixed-width output, round-trips via `bits_to_dec` |
 | Math library | Key angles; Pythagorean identity `sin²+cos²=1`; odd/even symmetry; `cosh²−sinh²=1`; `tanh=sinh/cosh`; forward/inverse round-trips; derived trig (`tan`/`cot`/`sec`/`csc`) vs `bc`'s `s()`/`c()` ratios and inverse hyperbolics vs their `ln`/`sqrt` closed forms |
 | Edge cases — domain errors | `asin(±1)`, `acos(±1)`, `asec(±1)`, `acsc(±1)`, `atanh(±1)`, `csc(0)`, `cot(0)` — all produce empty output as expected |

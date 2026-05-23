@@ -111,7 +111,10 @@ sub_signed() {
 # Precompute shared constants once. Many tests need these, and each bc call
 # carries process-spawn overhead in a shell loop.
 PI=$(pi)
-E=$(eml_e)
+# E is bc's e(1) — deliberately NOT eml_e. Using an independent oracle here keeps
+# the EML "= e" checks (eml(1,1), eml_e, eml_exp(1)) from comparing the layer to
+# itself; with E sourced from eml_e those assertions would be circular.
+E=$(echo "e(1)" | bc -l)
 HALF_PI=$(echo "2*a(1)" | bc -l)   # pi/2, used repeatedly for trig tests
 
 # ── 1. Boolean primitives ─────────────────────────────────────────────────────
@@ -687,6 +690,10 @@ T=0.0000000001   # tolerance for all EML and math-library float comparisons
 #   eml(1,1) = exp(1) - ln(1) = e - 0 = e
 #   eml_zero uses a 3-node tree: eml(1, eml(e, 1)) = e - ln(exp(e)) = 0
 check_float "eml(1,1) = e"          "$E"  "$(eml 1 1)"                            "$T"
+# The base operator itself, pinned directly to bc's e(x)-l(y) at points other than
+# (1,1), so the primitive is verified independently — not just via exp/ln.
+check_float "eml(2,3)  = e²-ln3"    "$(echo "e(2)-l(3)"   | bc -l)"  "$(eml 2 3)"   "$T"
+check_float "eml(0.5,4)= √e-ln4"    "$(echo "e(0.5)-l(4)" | bc -l)"  "$(eml 0.5 4)" "$T"
 check_float "eml_e    = e"          "$E"  "$(eml_e)"                              "$T"
 check_float "eml_exp(0) = 1"        1     "$(eml_exp 0)"                          "$T"
 check_float "eml_exp(1) = e"        "$E"  "$(eml_exp 1)"                          "$T"
@@ -788,6 +795,11 @@ section "eml_recip (Newton 1/x) agrees with eml_div"
 check_float "recip(1.5)  = 1/1.5"  "$(eml_div 1.5)"  "$(eml_recip 1.5)"           0.000000001
 check_float "recip(1.25) = 1/1.25" "$(eml_div 1.25)" "$(eml_recip 1.25)"          0.000000001
 check_float "recip(1.9)  = 1/1.9"  "$(eml_div 1.9)"  "$(eml_recip 1.9 7)"         0.000000001
+# Same cases against bc's 1/x directly (independent of eml_div and the Newton loop),
+# mirroring the eml_recip_auto oracle below.
+check_float "recip(1.5)  = 1/1.5 [bc]"  "$(echo "1/1.5"  | bc -l)" "$(eml_recip 1.5)"   0.000000001
+check_float "recip(1.25) = 1/1.25 [bc]" "$(echo "1/1.25" | bc -l)" "$(eml_recip 1.25)"  0.000000001
+check_float "recip(1.9)  = 1/1.9 [bc]"  "$(echo "1/1.9"  | bc -l)" "$(eml_recip 1.9 7)" 0.000000001
 check_float "recip(4)    = 0.25"   0.25   "$(eml_recip 4 8 0.2)"                   0.000000001
 check_float "recip(10)   = 0.1"    0.1    "$(eml_recip 10 9 0.05)"                 0.000000001
 check_float "recip(100)  = 0.01"   0.01   "$(eml_recip 100 12 0.005)"             0.0000001
