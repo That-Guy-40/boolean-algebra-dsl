@@ -417,9 +417,10 @@ surprising you.
 
 ---
 
-*Where to next: **Layer 3** (`OVERVIEW.md`) is the friendly, batteries-included
-calculator built on top of all this — `sin`, `cos`, `sqrt`, `sigmoid`, and friends,
-ready to use without the fussy-eater rules. And if you skipped it,
-[`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md) is the yes/no foundation everything here
-quietly stands on. Three layers, one idea: a single humble piece, stacked cleverly,
-becomes a whole world.*
+*Where to next: **[`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md)** is the friendly,
+batteries-included calculator built on top of all this — `sin`, `cos`, `sqrt`,
+`sigmoid`, and friends, with the same plain-English treatment. (For the full
+technical reference across all three layers, see `OVERVIEW.md`.) And if you skipped
+it, [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md) is the yes/no foundation everything
+here quietly stands on. Three layers, one idea: a single humble piece, stacked
+cleverly, becomes a whole world.*
