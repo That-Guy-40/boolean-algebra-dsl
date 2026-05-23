@@ -69,9 +69,10 @@ exploration and learning, starting with ourselves.**
 **Suggested files:** `lambda.sh` (sources `list-processing-kit.sh` for the combinator
 core), `test-lambda.sh`, later `TUTORIAL_LAMBDA.md`.
 
-**Status — ✅ DONE (2026-05-23).** Landed `lambda.sh` + `test-lambda.sh` (45 passing)
-and the `LAMBDA.md` reference. (Plain-English `TUTORIAL_LAMBDA.md` deferred, like the
-other tutorials — available on request.)
+**Status — ✅ DONE (2026-05-23).** Landed `lambda.sh` + `test-lambda.sh` (45 passing),
+the `LAMBDA.md` reference, and the plain-English `TUTORIAL_LAYER6_LAMBDA.md` ("three
+little machines build everything" — I/K/S as do-nothing/keepsake/wiring, true/false as
+choosers, numbers as repetition, and watching the symbols crunch).
 
 - [x] **Combinatory logic (SKI)** as real, curried, `apply`-able fn values — `SKI_I`,
       `SKI_K`, `SKI_S` (each partial application bakes its argument in via `%q`, with a

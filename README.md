@@ -2,7 +2,7 @@
 
 A pure-Bash library for Boolean logic and continuous mathematics, built from the ground up in three layers — each one derived entirely from the layer below it.
 
-> **New to this? Start here →** three plain-English, no-math walkthroughs build the project from the ground up: [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md) (yes/no switches → gates → binary → a working calculator chip), [`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md) (one math operator, `eml`, rebuilds the whole calculator keypad — add, multiply, division, even sine), and [`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md) (six primitives become a full scientific calculator, ending on the `sigmoid` function behind neural networks). If you're not a math person, read those first. Two companion walkthroughs go further once the trilogy clicks: [`TUTORIAL_LAYER4_ALT_ARITHMETIC.md`](TUTORIAL_LAYER4_ALT_ARITHMETIC.md) (stranger ways to define *number*) and [`TUTORIAL_LAYER5_COMBINATORS.md`](TUTORIAL_LAYER5_COMBINATORS.md) (the same calculator, rebuilt from recipes instead of wiring).
+> **New to this? Start here →** three plain-English, no-math walkthroughs build the project from the ground up: [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md) (yes/no switches → gates → binary → a working calculator chip), [`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md) (one math operator, `eml`, rebuilds the whole calculator keypad — add, multiply, division, even sine), and [`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md) (six primitives become a full scientific calculator, ending on the `sigmoid` function behind neural networks). If you're not a math person, read those first. Three companion walkthroughs go further once the trilogy clicks: [`TUTORIAL_LAYER4_ALT_ARITHMETIC.md`](TUTORIAL_LAYER4_ALT_ARITHMETIC.md) (stranger ways to define *number*), [`TUTORIAL_LAYER5_COMBINATORS.md`](TUTORIAL_LAYER5_COMBINATORS.md) (the same calculator, rebuilt from recipes instead of wiring), and [`TUTORIAL_LAYER6_LAMBDA.md`](TUTORIAL_LAYER6_LAMBDA.md) (all of computing, out of three tiny functions).
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -299,7 +299,7 @@ The punchline: **`word_add` (Layer-1 loop) == `fp_word_add` (foldl) == `fp_word_
 
 ## Lambda calculus — the function side
 
-`lambda.sh` (see [`LAMBDA.md`](LAMBDA.md)) builds the **function side** of Church–Turing: the lambda calculus, via **combinatory logic** — the three combinators **S**, **K**, **I**, which sidestep variable-capture by having no variables at all. Two views, cross-checked against each other and against the Church numerals in `alt-arithmetic.sh`:
+`lambda.sh` (see [`LAMBDA.md`](LAMBDA.md) for the reference and [`TUTORIAL_LAYER6_LAMBDA.md`](TUTORIAL_LAYER6_LAMBDA.md) for a plain-English walkthrough) builds the **function side** of Church–Turing: the lambda calculus, via **combinatory logic** — the three combinators **S**, **K**, **I**, which sidestep variable-capture by having no variables at all. Two views, cross-checked against each other and against the Church numerals in `alt-arithmetic.sh`:
 
 ```bash
 source ./lambda.sh

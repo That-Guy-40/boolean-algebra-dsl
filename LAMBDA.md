@@ -17,6 +17,9 @@ agree:
 - **As data you can reduce** — a symbolic reducer rewrites SKI terms written as strings
   (`"S K K x"`), step by step, so you can *watch* a term reduce to normal form.
 
+*New to the idea? [`TUTORIAL_LAYER6_LAMBDA.md`](TUTORIAL_LAYER6_LAMBDA.md) is the
+plain-English, no-math walkthrough; this file is the precise reference.*
+
 ## Loading
 
 ```bash
