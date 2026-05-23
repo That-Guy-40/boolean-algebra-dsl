@@ -2,7 +2,7 @@
 
 A pure-Bash library for Boolean logic and continuous mathematics, built from the ground up in three layers — each one derived entirely from the layer below it.
 
-> **New to this? Start here →** three plain-English, no-math walkthroughs build the project from the ground up: [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md) (yes/no switches → gates → binary → a working calculator chip), [`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md) (one math operator, `eml`, rebuilds the whole calculator keypad — add, multiply, division, even sine), and [`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md) (six primitives become a full scientific calculator, ending on the `sigmoid` function behind neural networks). If you're not a math person, read those first.
+> **New to this? Start here →** three plain-English, no-math walkthroughs build the project from the ground up: [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md) (yes/no switches → gates → binary → a working calculator chip), [`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md) (one math operator, `eml`, rebuilds the whole calculator keypad — add, multiply, division, even sine), and [`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md) (six primitives become a full scientific calculator, ending on the `sigmoid` function behind neural networks). If you're not a math person, read those first. Two companion walkthroughs go further once the trilogy clicks: [`TUTORIAL_LAYER4_ALT_ARITHMETIC.md`](TUTORIAL_LAYER4_ALT_ARITHMETIC.md) (stranger ways to define *number*) and [`TUTORIAL_LAYER5_COMBINATORS.md`](TUTORIAL_LAYER5_COMBINATORS.md) (the same calculator, rebuilt from recipes instead of wiring).
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -284,7 +284,7 @@ These do arithmetic by *counting through the gates*, so they're intentionally sl
 
 ## Combinator circuits — Layer 1 from the function side
 
-The flip side of the experimental layer: `combinator-circuits.sh` (see [`COMBINATOR_CIRCUITS.md`](COMBINATOR_CIRCUITS.md)) rebuilds Layer 1's word ops **declaratively**, from the `list-processing-kit.sh` combinators (`map`/`zipwith`/`foldl`/`scanl`) — and the test suite proves the two constructions agree bit-for-bit.
+The flip side of the experimental layer: `combinator-circuits.sh` (see [`COMBINATOR_CIRCUITS.md`](COMBINATOR_CIRCUITS.md) for the reference and [`TUTORIAL_LAYER5_COMBINATORS.md`](TUTORIAL_LAYER5_COMBINATORS.md) for a plain-English walkthrough) rebuilds Layer 1's word ops **declaratively**, from the `list-processing-kit.sh` combinators (`map`/`zipwith`/`foldl`/`scanl`) — and the test suite proves the two constructions agree bit-for-bit.
 
 ```bash
 source ./combinator-circuits.sh

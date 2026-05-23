@@ -191,10 +191,10 @@ Layer-1 twin bit-for-bit; `test-list-processing-kit.sh` grew 50 → 77. Full wri
       `fp_*` vs its Layer-1 twin over 4- and 8-bit grids. **The payoff:** `word_add`
       (loop) == `fp_word_add` (foldl) == `fp_word_add_scan` (scanl+zipwith3) ==
       `ripple_add8` (nibbles) — four constructions, one answer.
-- [x] *(Doc)* `COMBINATOR_CIRCUITS.md` reference + a README section. A plain-English
-      `TUTORIAL_*` ("the adder is a one-line recurrence") is teed up as the natural next
-      step (deferred, like the Layer-1 8-bit tutorial sidebar — no jargon forced into
-      the layperson voice yet).
+- [x] *(Doc)* `COMBINATOR_CIRCUITS.md` reference + a README section, **and** the
+      plain-English `TUTORIAL_LAYER5_COMBINATORS.md` ("the same machine, built the other
+      way" — map/zipwith/fold as a stamping-belt/zipper/receipt, addition as "carry the
+      1," four roads to one answer), in the no-math Layer 1–4 tutorial voice.
 
 ---
 

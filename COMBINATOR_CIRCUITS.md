@@ -6,6 +6,9 @@ scans** from `list-processing-kit.sh`. Every reconstruction is named `fp_*`
 (function-side) and is checked **bit-for-bit** against the Layer-1 original in
 `test-combinator-circuits.sh` (111 passing).
 
+*New to the idea? [`TUTORIAL_LAYER5_COMBINATORS.md`](TUTORIAL_LAYER5_COMBINATORS.md) is
+the plain-English, no-math walkthrough; this file is the precise reference.*
+
 This is the project's *combinator payoff*: the **machine side** (a loop walking the
 bits) and the **function side** (a fold over the bit list) compute the identical
 circuit. Proving they agree is a Church–Turing wink in miniature — and it still
