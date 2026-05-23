@@ -69,19 +69,25 @@ exploration and learning, starting with ourselves.**
 **Suggested files:** `lambda.sh` (sources `list-processing-kit.sh` for the combinator
 core), `test-lambda.sh`, later `TUTORIAL_LAMBDA.md`.
 
-- [ ] Start with **combinatory logic (SKI)** — the pragmatic core, because it
-      sidesteps variable binding / α-renaming / capture, which are painful in bash:
-      - `I x       = x`            (identity)
-      - `K x y     = x`            (const)
-      - `S f g x   = f x (g x)`    (substitute-and-apply)
-- [ ] Show `SKK = I` (identity falls out of S and K).
-- [ ] Derive a few standard combinators: `B` (compose), `C` (flip), `W` (duplicate).
-- [ ] Rebuild Church `TRUE`/`FALSE`/numerals on top of SKI, reconnecting to the
-      Church work already in `alt-arithmetic.sh` (note **combinatory completeness**:
-      SKI can express any closed lambda term).
-- [ ] *(Stretch)* a tiny **β-reduction stepper** over lambda terms represented as
-      data, with a normal-order reduction strategy — enough to evaluate small terms.
-- [ ] Tests checking reductions against expected normal forms.
+**Status — ✅ DONE (2026-05-23).** Landed `lambda.sh` + `test-lambda.sh` (45 passing)
+and the `LAMBDA.md` reference. (Plain-English `TUTORIAL_LAMBDA.md` deferred, like the
+other tutorials — available on request.)
+
+- [x] **Combinatory logic (SKI)** as real, curried, `apply`-able fn values — `SKI_I`,
+      `SKI_K`, `SKI_S` (each partial application bakes its argument in via `%q`, with a
+      one-level staging helper so the quoting stays readable).
+- [x] **`S K K = I`** shown both ways — by applying the fn values, and by symbolic
+      reduction (`S K K x → K x (K x) → x`).
+- [x] Derived **`B`** (compose), **`C`** (flip), **`W`** (duplicate) as fn values.
+- [x] **Church `TRUE`/`FALSE`/numerals on SKI** (`TRUE=K`, `FALSE=K I`, `ZERO=K I`,
+      `SUCC=S B`), cross-checked in the suite against `alt-arithmetic.sh`'s
+      `CHURCH_TRUE`/`FALSE` and `int_to_church` — two constructions, same numbers.
+- [x] *(Stretch — done)* a **symbolic reducer** over SKI terms-as-data
+      (`lc_step` / `lc_normalize` / `lc_trace`), normal order, rules `I a→a`, `K a b→a`,
+      `S a b c→a c (b c)`. (SKI specifically — it sidesteps the variable-capture that a
+      full β-reducer over binders would drag in.) Symbolic numerals reduce to n-fold
+      application: `lc_church 3 f x → f (f (f x))`.
+- [x] Tests checking reductions against expected normal forms (`test-lambda.sh`).
 
 ---
 
