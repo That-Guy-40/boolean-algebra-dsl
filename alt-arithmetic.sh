@@ -109,3 +109,148 @@ peano_expt ()
 #   peano_to_int "$(peano_mult "$(int_to_peano 3)" "$(int_to_peano 4)")"   # 12
 #   peano_to_int "$(peano_div  "$(int_to_peano 13)" "$(int_to_peano 4)")"  # 3
 #   peano_to_int "$(peano_expt "$(int_to_peano 2)" "$(int_to_peano 5)")"   # 32
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CHURCH NUMERALS  (number as repeated application)
+#
+# Alonzo Church's encoding from the lambda calculus: a number n IS a function
+# that, given any function f and a starting value x, applies f to x exactly n
+# times.  0 = "do nothing", 1 = "do f once", 3 = "do f three times", etc. Numbers
+# aren't things you store — they're *behaviours*.
+#
+# True closure-based numerals can't be expressed in bash (no first-class
+# functions/closures that survive command substitution). So we realise a numeral
+# as a repetition count, but treat it strictly as an ITERATOR: it is only ever
+# used to drive `apply f n times` — never as an operand of + or *. The successor
+# (+1) is the sole arithmetic primitive; add / mult / expt are built purely by
+# composing iteration, mirroring the lambda-calculus identities:
+#       add M N = apply succ, N times, to M
+#       mul M N = apply (+M),  N times, to 0
+#       exp B E = apply (×B),  E times, to 1
+# The higher-order heart survives intact: `church_apply` will iterate ANY unary
+# function — including the Layer-1 `inc` circuit (see church_to_bits), which is
+# how a Church numeral reaches down and drives the gates.
+# ═════════════════════════════════════════════════════════════════════════════
+
+church_zero    () { echo 0; }
+church_one     () { echo 1; }
+church_succ    () { echo $(( $1 + 1 )); }                 # the one arithmetic primitive
+church_is_zero () { if [ "$1" -eq 0 ]; then echo true; true; else echo false; false; fi; }
+
+# THE combinator — a Church numeral in action: apply command F to X, n times.
+church_apply ()
+{
+  # church_apply N F X  ->  F(F(…F(X)…)), n times.  F is any unary command.
+  local n="$1" f="$2" x="$3" i
+  for ((i=0; i<n; i++)); do x=$("$f" "$x"); done
+  printf '%s' "$x"
+}
+
+church_add ()
+{
+  # M + N = apply the successor to M, N times.
+  church_apply "$2" church_succ "$1"
+}
+
+church_mult ()
+{
+  # M × N = apply "+M" to 0, N times. (Repeated addition; no * on the numerals.)
+  local M="$1" N="$2" acc i; acc=$(church_zero)
+  for ((i=0; i<N; i++)); do acc=$(church_add "$M" "$acc"); done
+  printf '%s' "$acc"
+}
+
+church_expt ()
+{
+  # B ^ E = apply "×B" to 1, E times. (Repeated multiplication.)
+  local B="$1" E="$2" acc i; acc=$(church_one)
+  for ((i=0; i<E; i++)); do acc=$(church_mult "$B" "$acc"); done
+  printf '%s' "$acc"
+}
+
+# Bridges. The carrier already is the count, so to/from int is the identity; the
+# interesting bridge is church_to_bits, which feeds the numeral the Layer-1 +1.
+church_to_int  () { printf '%s' "$1"; }
+int_to_church  () { printf '%s' "$1"; }
+church_to_bits () { church_apply "$1" inc "$(int_to_bits 0 "${2:-8}")"; }   # iterate the gate-level +1
+
+# Church testing:
+#   church_apply 5 church_succ 0     # 5   (apply +1 five times to 0)
+#   church_add  2 3                  # 5
+#   church_mult 3 4                  # 12
+#   church_expt 2 5                  # 32
+#   bits_to_int "$(church_to_bits 5)"  # 5   (the numeral drove Layer-1 inc)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# MODULAR / CLOCK ARITHMETIC  (ℤ/nℤ)
+#
+# Arithmetic on a clock of n positions: count past n−1 and you wrap back to 0
+# (10 + 5 on a 12-hour clock is 3). This is a *finite* number system, and it is
+# not exotic — it is what the hardware already does. A fixed width of W bits can
+# only hold 0…2^W−1, so binary addition that keeps W bits is exactly arithmetic
+# mod 2^W: the ALU's carry-out/overflow is the clock hand sweeping past the top.
+# mod_add_bits4 makes that literal by running the Layer-1 ripple adder.
+# ═════════════════════════════════════════════════════════════════════════════
+
+mod_reduce ()
+{
+  # Least non-negative residue of a (mod n). NOTE: r must be assigned on its own
+  # line — in `local a=$1 n=$2 r=$((a%n))` the a/n inside the arithmetic resolve
+  # to the CALLER's variables, not these locals (the project's recurring footgun).
+  local a=$1 n=$2 r
+  r=$(( a % n )); [ "$r" -lt 0 ] && r=$(( r + n ))
+  echo "$r"
+}
+
+mod_add () { mod_reduce $(( $1 + $2 )) "$3"; }   # (a + b) mod n
+mod_sub () { mod_reduce $(( $1 - $2 )) "$3"; }   # (a − b) mod n
+mod_mul () { mod_reduce $(( $1 * $2 )) "$3"; }   # (a × b) mod n
+
+mod_pow ()
+{
+  # base^exp mod n, by repeated squaring (so the intermediates never blow up).
+  local base=$1 e=$2 n=$3 result=1
+  base=$(mod_reduce "$base" "$n")
+  while [ "$e" -gt 0 ]; do
+    (( e & 1 )) && result=$(mod_mul "$result" "$base" "$n")
+    base=$(mod_mul "$base" "$base" "$n"); e=$(( e >> 1 ))
+  done
+  echo "$result"
+}
+
+mod_inverse ()
+{
+  # Multiplicative inverse of a (mod n) via the extended Euclidean algorithm:
+  # the x with a·x ≡ 1 (mod n). Exists iff gcd(a, n) = 1; otherwise echoes "none".
+  local a=$1 n=$2 t=0 newt=1 r=$2 newr q tmp
+  newr=$(( a % n )); [ "$newr" -lt 0 ] && newr=$(( newr + n ))
+  while [ "$newr" -ne 0 ]; do
+    q=$(( r / newr ))
+    tmp=$newt; newt=$(( t - q*newt )); t=$tmp
+    tmp=$newr; newr=$(( r - q*newr )); r=$tmp
+  done
+  if [ "$r" -gt 1 ]; then echo "none"; return 1; fi
+  [ "$t" -lt 0 ] && t=$(( t + n ))
+  echo "$t"
+}
+
+mod_add_bits4 ()
+{
+  # (a + b) mod 16, computed BY the Layer-1 4-bit ripple adder (carry-out
+  # discarded). Concrete proof that fixed-width binary is clock arithmetic.
+  local a=$1 b=$2 A B r; local -a R
+  A=$(int_to_bits "$a" 4); B=$(int_to_bits "$b" 4)
+  r=$(ripple_add4 $A $B)              # S0 S1 S2 S3 Cout (unquoted splat into args)
+  read -ra R <<< "$r"
+  bits_to_int "${R[0]} ${R[1]} ${R[2]} ${R[3]}"
+}
+
+# Modular testing:
+#   mod_add 10 5 12        # 3    (10 + 5 on a clock face)
+#   mod_sub 2 5 12         # 9
+#   mod_pow 2 10 1000      # 24   (2^10 = 1024 ≡ 24)
+#   mod_inverse 3 7        # 5    (3·5 = 15 ≡ 1 mod 7)
+#   mod_inverse 4 6        # none (gcd(4,6) = 2)
+#   mod_add_bits4 12 11    # 7    (= 23 mod 16, via the ripple adder)
