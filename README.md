@@ -130,6 +130,18 @@ if bits_gt "$(echo 1 0 1 0)" "$(echo 1 1 0 0)"; then echo "5 > 3"; fi
 
 Equality is the XNOR of every bit pair, all ANDed together; greater-than uses cascaded priority logic from the MSB down (the first differing bit decides). Less-than is `bits_gt` with the operands swapped.
 
+### Multiplexer, min, and max
+
+`mux` is the gate-level 2:1 selector (`out = (¬sel ∧ a) ∨ (sel ∧ b)`); `word_mux` applies it across a word. `bits_min` / `bits_max` then fall out by composition — the comparator picks the select line, the mux routes the operand:
+
+```bash
+mux 0 1 0                       # 1   (sel=0 → a);  mux 1 1 0 → 0  (sel=1 → b)
+word_mux 1 "1 1 0 0" "1 0 1 0"  # "1 0 1 0"   (sel=1 → second word)
+
+bits_min "1 1 0 0" "1 0 1 0"    # "1 1 0 0"   (min(3,5) = 3)
+bits_max "1 1 0 0" "1 0 1 0"    # "1 0 1 0"   (max(3,5) = 5)
+```
+
 ### Shifts and the ALU
 
 `shl` / `shr` are width-preserving logical shifts. The capstone is **`alu4`** — a 4-bit arithmetic-logic unit whose data path is built entirely from the circuits above (ripple adder/subtractor, word-level bitwise ops, the comparator for `slt`, the shifters) plus `is_zero` for a status flag:
@@ -236,10 +248,10 @@ sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 
 ```bash
 bash test-boolean-funcs.sh
-# 776 passed, 0 failed
+# 871 passed, 0 failed
 ```
 
-Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions (incl. complement reductions `nand_all`/`nor_all`/`xnor_all` as exact negations, `all`/`any`/`none` aliases, and two-word `and_any`/`or_any`/`xor_any` cross-checked against `bits_eq` and `is_zero`), word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts, the `alu4` ALU (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
+Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions (incl. complement reductions `nand_all`/`nor_all`/`xnor_all` as exact negations, `all`/`any`/`none` aliases, and two-word `and_any`/`or_any`/`xor_any` cross-checked against `bits_eq` and `is_zero`), the `mux`/`word_mux` selector and `bits_min`/`bits_max` over a full grid, word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts, the `alu4` ALU (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases.
 
 ## Attribution
 
@@ -271,6 +283,9 @@ ripple_add4  ripple_add8
 flip_bit  ripple_sub4  ripple_sub8
 bit_to_bool  bits_eq  bits_gt  compare4  compare8
 int_to_bits
+
+# Multiplexer, min & max
+mux  word_mux  bits_min  bits_max
 
 # Shifts & ALU
 shl  shr  alu4

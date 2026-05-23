@@ -22,14 +22,19 @@ maj false true  false   # false (1/3)
 maj true  true  true    # true  (3/3)
 ```
 
+> **Note:** the library now ships a real `mux` (plus `word_mux`, `bits_min`,
+> `bits_max`) that work on `0`/`1` bit digits — e.g. `mux 0 1 0 → 1`. The snippet
+> below is the *gate-level* equivalent over `true`/`false` values; it is named
+> `gate_mux` here so it doesn't shadow the library function if you source both.
+
 ```bash
 # Mux (2-to-1 multiplexer): select A when S=false, B when S=true
-# mux(S,A,B) = (NOT S AND A) OR (S AND B)
-mux() {
+# gate_mux(S,A,B) = (NOT S AND A) OR (S AND B)
+gate_mux() {
     or "$(and "$(not "$1")" "$2")" "$(and "$1" "$3")"
 }
-mux false true  false   # true  (selected A=true)
-mux true  true  false   # false (selected B=false)
+gate_mux false true  false   # true  (selected A=true)
+gate_mux true  true  false   # false (selected B=false)
 ```
 
 ### All 16 two-input Boolean functions

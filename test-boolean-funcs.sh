@@ -613,6 +613,36 @@ for n in $(seq 0 15); do
 done
 check_str "bits_to_int round-trips int_to_bits(100)" "100" "$(bits_to_int "$(int_to_bits 100)")"
 
+# ── 4e-iii. Multiplexer, min, and max ─────────────────────────────────────────
+section "mux / word_mux (2:1 select)"
+# 1-bit mux truth table: out = (¬sel∧a) ∨ (sel∧b).
+check_str "mux 0 0 1 = 0 (a)" "0" "$(mux 0 0 1)"
+check_str "mux 1 0 1 = 1 (b)" "1" "$(mux 1 0 1)"
+check_str "mux 0 1 0 = 1 (a)" "1" "$(mux 0 1 0)"
+check_str "mux 1 1 0 = 0 (b)" "0" "$(mux 1 1 0)"
+# word mux selects a whole word.
+check_str "word_mux 0 picks A" "1 1 0 0" "$(word_mux 0 "1 1 0 0" "1 0 1 0")"
+check_str "word_mux 1 picks B" "1 0 1 0" "$(word_mux 1 "1 1 0 0" "1 0 1 0")"
+
+section "bits_min / bits_max (comparator + word_mux)"
+# Exhaustive over a representative grid, compared to shell min/max.
+for a in 0 3 5 7 8 12 15; do for b in 0 1 5 6 9 15; do
+    A=$(dec_to_bits $a 4); B=$(dec_to_bits $b 4)
+    check_str "min($a,$b)" "$(( a < b ? a : b ))" "$(bits_to_int "$(bits_min "$A" "$B")")"
+    check_str "max($a,$b)" "$(( a > b ? a : b ))" "$(bits_to_int "$(bits_max "$A" "$B")")"
+done; done
+# Equal operands return that value; min and max are commutative in magnitude.
+check_str "min(8,8) = 8" "8" "$(bits_to_int "$(bits_min "$(dec_to_bits 8 4)" "$(dec_to_bits 8 4)")")"
+check_str "min(a,b) = min(b,a)" \
+    "$(bits_to_int "$(bits_min "$(dec_to_bits 6 4)" "$(dec_to_bits 11 4)")")" \
+    "$(bits_to_int "$(bits_min "$(dec_to_bits 11 4)" "$(dec_to_bits 6 4)")")"
+# min and max together recover both operands: {min,max} = {a,b}.
+for pair in "3 5" "9 9" "15 0"; do
+    set -- $pair; A=$(dec_to_bits $1 4); B=$(dec_to_bits $2 4)
+    lo=$(bits_to_int "$(bits_min "$A" "$B")"); hi=$(bits_to_int "$(bits_max "$A" "$B")")
+    check_str "min+max sum = a+b [$1,$2]" "$(( $1 + $2 ))" "$(( lo + hi ))"
+done
+
 # ── 4f. Shifts and the ALU ────────────────────────────────────────────────────
 section "shl / shr (logical shifts, width-preserving)"
 check_str "shl 3  = 6"   "0 1 1 0" "$(shl "$(dec_to_bits 3 4)")"

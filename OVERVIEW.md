@@ -246,6 +246,21 @@ The `8 vs 7` case (`1000` vs `0111`) is the one a naive "count the 1s" approach
 gets wrong: cascaded priority correctly lets the single high bit of 8 outweigh
 the three low bits of 7.
 
+### Multiplexer, min, and max
+
+`mux` is the textbook 2:1 multiplexer — `out = (¬sel ∧ a) ∨ (sel ∧ b)`, three
+gates — and `word_mux` applies it bit-by-bit to route a whole word. With a
+selector in hand, `bits_min` / `bits_max` are pure composition: the comparator
+produces the verdict, the mux acts on it.
+
+```bash
+bits_min () { ... bits_gt "$B" "$A" → sel ; word_mux "$sel" "$A" "$B" ; }
+```
+
+`bits_min "3" "5"` asks `bits_gt 5 3` (true → keep `A`); `bits_max` is the same
+with the select line flipped. No new arithmetic — just *compare, then select* —
+which is exactly how a hardware min/max unit is wired.
+
 ---
 
 ## Layer 1 — Shifts and the ALU (capstone)
@@ -544,7 +559,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 776 passed, 0 failed
+# 871 passed, 0 failed
 ```
 
 Coverage summary:
@@ -557,6 +572,7 @@ Coverage summary:
 | Boolean algebra axioms | Commutativity, associativity, distributivity, identity, complement, annihilator — all verified exhaustively over every input assignment |
 | Word-level Boolean ops | `word_not`/`word_and`/`word_or`/`word_xor` bitwise results, word De Morgan; `and_all`/`or_all`/`xor_all` parity, `is_zero` = ¬`or_all` |
 | Complement & any reducers | `nand_all`/`nor_all`/`xnor_all` as exact negations of their bases (over all 4-bit words); `nor_all` = `is_zero`; `all`/`any`/`none` aliases; two-word `and_any`/`or_any`/`xor_any` cross-checked vs `bits_eq` and `is_zero` |
+| Mux, min & max | `mux` truth table and `word_mux` selection; `bits_min`/`bits_max` over a full grid vs shell min/max, with `min+max = a+b` and commutativity checks |
 | Word helpers & predicates | `inc`/`dec`/`negate` wrap and inverses (`a + (−a) = 0`); `is_one`/`is_even`/`is_odd`/`is_negative` exhaustively; `parity = popcount mod 2`, `lsb`/`msb`, `bits_to_int` decode over all 4-bit values |
 | Shifts & ALU | `shl`/`shr` width-preserving shifts; `alu4` over every opcode plus Z/C/N/V flag cases (signed overflow on 3+5, no-borrow carry on 5−3, zero+carry+overflow on 8+8) and unknown-opcode rejection |
 | Adders | All 4 `half_adder` combinations with `true`/`false` strings; all 4 with `0`/`1` bit digits; 4 mixed inputs; all 8 `full_adder` combinations; `full_adder` string inputs |
@@ -598,6 +614,9 @@ ripple_add4  ripple_add8
 flip_bit  ripple_sub4  ripple_sub8
 bit_to_bool  bits_eq  bits_gt  compare4  compare8
 int_to_bits
+
+# Multiplexer, min & max
+mux  word_mux  bits_min  bits_max
 
 # Shifts & ALU
 shl  shr  alu4

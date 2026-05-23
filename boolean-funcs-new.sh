@@ -700,6 +700,56 @@ bits_to_int ()
 #bits_to_int "0 0 1 0"            # -> 4
 
 
+# MULTIPLEXER, MIN, AND MAX
+# A 2:1 multiplexer (the canonical "select one of two" circuit) and the
+# magnitude min/max built from it: the comparator decides, the mux routes.
+
+mux ()
+{
+  # 1-bit 2:1 multiplexer:  mux SEL a b  ->  a if SEL is 0/false, b if 1/true.
+  # Gate form:  out = (¬SEL ∧ a) ∨ (SEL ∧ b).
+  local sel a b
+  sel=$(bit_to_bool "$1"); a=$(bit_to_bool "$2"); b=$(bit_to_bool "$3")
+  bool_to_bit "$(or "$(and "$(not "$sel")" "$a")" "$(and "$sel" "$b")")"
+}
+
+word_mux ()
+{
+  # word-level 2:1 mux:  word_mux SEL A B  ->  A if SEL 0/false, B if 1/true.
+  # Applies the 1-bit mux at every position with the shared select line.
+  local sel="$1"
+  local -a A B; read -ra A <<< "$2"; read -ra B <<< "$3"
+  local out="" i
+  for ((i=0; i<${#A[@]}; i++)); do out+="$(mux "$sel" "${A[i]}" "${B[i]}") "; done
+  echo "${out% }"
+}
+
+bits_min ()
+{
+  # min(A, B): the comparator picks the select line, word_mux routes the answer.
+  # word_mux sel A B yields A when sel=0; we want A exactly when A < B (= bits_gt B A).
+  local A="$1" B="$2" sel
+  if bits_gt "$B" "$A" >/dev/null; then sel=0; else sel=1; fi   # A < B -> keep A
+  word_mux "$sel" "$A" "$B"
+}
+
+bits_max ()
+{
+  # max(A, B): the mirror of bits_min — keep B when A < B, else keep A.
+  local A="$1" B="$2" sel
+  if bits_gt "$B" "$A" >/dev/null; then sel=1; else sel=0; fi   # A < B -> take B
+  word_mux "$sel" "$A" "$B"
+}
+
+# mux / min / max testing (LSB-first):
+#mux 0 1 0                        # -> 1   (select a)
+#mux 1 1 0                        # -> 0   (select b)
+#word_mux 0 "1 1 0 0" "1 0 1 0"   # -> 1 1 0 0   (A)
+#word_mux 1 "1 1 0 0" "1 0 1 0"   # -> 1 0 1 0   (B)
+#bits_min "1 1 0 0" "1 0 1 0"     # -> 1 1 0 0   (min(3,5) = 3)
+#bits_max "1 1 0 0" "1 0 1 0"     # -> 1 0 1 0   (max(3,5) = 5)
+
+
 # SHIFTS AND THE ALU
 # Logical shifts (LSB-first, fixed width) and a 4-bit arithmetic-logic unit that
 # ties the whole Layer-1 stack together: the ripple adder/subtractor, the
