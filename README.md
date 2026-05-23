@@ -248,7 +248,7 @@ sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 
 ## Experimental — alternative arithmetic
 
-A separate, optional layer (`alt-arithmetic.sh`, see [`ALT_ARITHMETIC.md`](ALT_ARITHMETIC.md)) plays with **other ways to define number**, each wired back down into the Boolean layer:
+A separate, optional layer (`alt-arithmetic.sh`, see [`ALT_ARITHMETIC.md`](ALT_ARITHMETIC.md) for the reference and [`TUTORIAL_ALT_ARITHMETIC.md`](TUTORIAL_ALT_ARITHMETIC.md) for a plain-English walkthrough) plays with **other ways to define number**, each wired back down into the Boolean layer:
 
 ```bash
 source ./alt-arithmetic.sh
