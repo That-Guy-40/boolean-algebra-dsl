@@ -101,7 +101,7 @@ Church layer needs them; everything from `as_fn` down — the Scheme-style list
 toolkit — lives in **`list-processing-kit.sh`**, which `alt-arithmetic.sh` sources
 (making it available alongside the arithmetic models). The kit bundles its own copy
 of `apply`/`apply2`, so it is **fully standalone** — exercised in isolation by
-`test-list-processing-kit.sh` (50 passing). (`alt-arithmetic.sh` likewise keeps a
+`test-list-processing-kit.sh` (77 passing). (`alt-arithmetic.sh` likewise keeps a
 local copy of `foldr` so `church_iter` folds `compose` without reaching into the
 kit.)
 
@@ -119,6 +119,10 @@ zipwith "$BXOR" "1 0 1 1" "1 1 0 1"     # 0 1 1 0     ==  word_xor   (BXOR bridg
 foldl   and true "true true false"      # false       ==  and_all  (AND-reduce)
 all     "$IS1" "1 1 1 1"                # true        ==  and_all ;  any … == or_all
 ```
+
+`combinator-circuits.sh` turns this payoff into named `fp_*` functions and pushes it
+all the way to the ripple adder — rebuilt as a carry-threading `foldl`/`scanl` — each
+checked bit-for-bit against Layer 1. See [`COMBINATOR_CIRCUITS.md`](COMBINATOR_CIRCUITS.md).
 
 A Church numeral is then literally `n`-fold composition — fold `compose` over `n`
 copies of `f` — and every operation is the textbook λ-identity, expressed with

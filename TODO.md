@@ -153,47 +153,48 @@ are fast, pure Layer 1 — they stay in the now-1022-test core).
   sources `boolean-funcs-new.sh` to assert equivalence. (Recommended over stuffing
   Layer-1 rebuilds into the kit, which would couple a general tool to this project.)
 
+**Status — ✅ DONE (2026-05-23).** Landed `combinator-circuits.sh` + the 4a kit
+additions. `test-combinator-circuits.sh` (111 passing) proves every `fp_*` equals its
+Layer-1 twin bit-for-bit; `test-list-processing-kit.sh` grew 50 → 77. Full writeup in
+`COMBINATOR_CIRCUITS.md`.
+
 ### 4a. Round out the kit's generic FP combinators (`list-processing-kit.sh`)
-- [ ] `none`, `count` / `count_if pred xs`, `elem` / `member`, `find_index`.
-- [ ] Boolean folds over `true`/`false` atoms: `and_list` / `or_list` (the
-      domain-neutral cousins of Layer 1's `and_all`/`or_all`); numeric `sum`/`product`.
-- [ ] **Predicate combinators:** `complement p`, `conj p q`, `disj p q` — so identities
-      like `take_until p = take_while (complement p)` become literally true.
-- [ ] `replicate n x`, `concat`, `intercalate`, maybe `zipwith3`.
-- [ ] Tests added to `test-list-processing-kit.sh` (still standalone, still fast).
+- [x] `none`, `count_if pred xs`, `elem`, `find_index`.
+- [x] Boolean folds `and_list` / `or_list` over true/false atoms; numeric `lsum` /
+      `lproduct` (named `lsum`/`lproduct`, not `sum`/`product`, to avoid shadowing the
+      `sum` coreutil — domain-neutral, so the kit stays standalone).
+- [x] **Predicate combinators** `complement p`, `conj p q`, `disj p q` — and the
+      identity `take_until p == take_while (complement p)` is now a passing test.
+- [x] `replicate n x`, `intercalate sep xs`, `zipwith3` (plus `apply3`/`as_fn3` to
+      support it). *(`concat` skipped — a space-join already concatenates lists.)*
+- [x] Tests added to `test-list-processing-kit.sh` (50 → 77, still standalone & fast).
 
 ### 4b. Reconstruct the Layer-1 word ops compositionally (`combinator-circuits.sh`)
-- [ ] **Bitwise algebra as one-liners:** `word_not = map flip_bit`,
-      `word_and/or/xor = zipwith and/or/ne`, the `*_all` reductions = `foldl <gate>
-      <seed>`. Re-derive the whole word-Boolean algebra from the kit.
-- [ ] **Half/full adder that build on each other** (the user's phrase): `full_adder`
-      composed from two `half_adder`s via `apply`/`compose`, returning a `(sum, carry)`
-      pair (reuse the Church pair trick, or the kit's `:`-joined tuples).
-- [ ] **★ The centerpiece — ripple adder as a fold/scan:** thread the carry with
-      `foldl` over the zipped bit-pairs, accumulator `= (carry, output-so-far)`; or use
-      **`scanl`** to expose the *entire carry chain* (you can literally watch the carry
-      propagate — gorgeous for a tutorial). Width is just the list length, so it is
-      **n-bit automatically**. Cross-check against `ripple_add4`/`ripple_add8`.
-- [ ] **Arbitrary width + n-ary input** — clarifying the terminology that was reached
-      for ("n-ary bit input", "extensible bit length"):
-      - A fixed-arity gate (2-input `and`) becomes **variadic** by *folding it over a
-        list* — that fold-of-a-binary-op is the **reducer** in question; "n-ary input"
-        = reduce a gate across an N-element bit list.
-      - Because the word ops are reducers over a bit *list*, the **width is just the
-        list's length** — the same `word_add` runs at 4, 8, 16, … bits with no change.
-        That is what makes the top-level functions' bit length arbitrarily extensible.
-      - n-ary *word* reducers: `add_all "wA wB wC …" = foldl1 word_add` (sum a whole
-        list of words); `and_all_words` / `or_all_words = foldl1 word_and/word_or`.
-- [ ] **Shifts as pure list surgery** (no arithmetic): `shl xs = take w (0 : xs)`,
-      `shr xs = drop 1 xs ++ 0`, built from the kit's `take`/`drop`/`concat`/
-      `replicate`. Cross-check against Layer 1's `shl`/`shr`; cover 8-bit widths.
-- [ ] **★ Equivalence tests** (`test-combinator-circuits.sh`): for many words at width
-      4 *and* 8, assert the combinator version equals the Layer-1 version bit-for-bit
-      (`map flip_bit` vs `word_not`, the fold-adder vs `ripple_add*`, the list-shifts vs
-      `shl`/`shr`). **This is the payoff** — the function side and the machine side,
-      shown to compute the identical circuit.
-- [ ] *(Doc)* a future `TUTORIAL_*` (or a section folded into the combinator tutorial)
-      showing "the adder is a one-line recurrence" and the carry chain via `scanl`.
+- [x] **Bitwise algebra as one-liners:** `fp_word_not = map flip_bit`,
+      `fp_word_{and,or,xor} = zipwith bit_{and,or,xor}`, and `fp_{and,or,xor}_all` =
+      map-to-bool then fold. (Bit gates bridge `0/1` ↔ the gates' `true/false`.)
+- [x] **Half/full adder building on each other:** `fp_full_adder` = two
+      `fp_half_adder`s + an OR, all from the bit gates. *(Built straight from the bit
+      gates rather than literal `apply`/`compose` — clearer, same composition.)*
+- [x] **★ Ripple adder as a fold/scan:** `fp_word_add` is a `foldl` threading the carry
+      (accumulator `"carry|bits"`); `fp_carry_chain` is a `scanl` exposing the whole
+      carry ripple; and `fp_word_add_scan` rebuilds the adder a *third* way from the
+      carry chain + a `zipwith3`. n-bit automatically (width = list length).
+- [x] **Arbitrary width + n-ary input:** width = list length (4/8/16-bit all tested);
+      n-ary BIT input *is* `fp_{and,or,xor}_all` (an N-input gate = the 2-input gate
+      folded over N bits); n-ary WORD reducers `fp_{and,or,xor}_words` / `fp_add_words`
+      fold a word op over `"$@"` (words contain spaces, so they fold over the argument
+      list, not a kit list — noted in the file).
+- [x] **Shifts as pure list surgery:** `fp_shl`/`fp_shr` (+ `fp_rol`/`fp_ror`) from
+      `take`/`drop`/`replicate`; cross-checked vs Layer 1 at 4- and 8-bit.
+- [x] **★ Equivalence tests** (`test-combinator-circuits.sh`, 111 passing): every
+      `fp_*` vs its Layer-1 twin over 4- and 8-bit grids. **The payoff:** `word_add`
+      (loop) == `fp_word_add` (foldl) == `fp_word_add_scan` (scanl+zipwith3) ==
+      `ripple_add8` (nibbles) — four constructions, one answer.
+- [x] *(Doc)* `COMBINATOR_CIRCUITS.md` reference + a README section. A plain-English
+      `TUTORIAL_*` ("the adder is a one-line recurrence") is teed up as the natural next
+      step (deferred, like the Layer-1 8-bit tutorial sidebar — no jargon forced into
+      the layperson voice yet).
 
 ---
 

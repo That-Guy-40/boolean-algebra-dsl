@@ -95,5 +95,42 @@ section "composition with the kit (a small pipeline)"
 # sum of squares of the even numbers in 1..6  = 4 + 16 + 36 = 56
 check_str "Σ even² in 1..6 = 56" "56" "$(foldl "$ADD" 0 "$(map "$SQ" "$(filter "$EVEN" "$(lrange 1 6)")")")"
 
+section "more predicates: none / count_if / elem / find_index"
+check_str "none even (none)" "true"  "$(none "$EVEN" '1 3 5')"
+check_str "none even (one)"  "false" "$(none "$EVEN" '1 3 4')"
+check_str "count_if even"    "3"     "$(count_if "$EVEN" '1 2 3 4 5 6')"
+check_str "count_if none"    "0"     "$(count_if "$EVEN" '1 3 5')"
+check_str "elem present"     "true"  "$(elem 4 '3 4 5')"
+check_str "elem absent"      "false" "$(elem 9 '3 4 5')"
+check_str "find_index even"  "3"     "$(find_index "$EVEN" '1 3 5 6 7')"
+check_str "find_index none"  "-1"    "$(find_index "$EVEN" '1 3 5')"
+
+section "reductions: and_list / or_list / lsum / lproduct"
+check_str "and_list all true" "true"  "$(and_list 'true true true')"
+check_str "and_list a false"  "false" "$(and_list 'true false true')"
+check_str "or_list a true"    "true"  "$(or_list 'false true false')"
+check_str "or_list all false" "false" "$(or_list 'false false false')"
+check_str "and_list empty"    "true"  "$(and_list '')"
+check_str "or_list empty"     "false" "$(or_list '')"
+check_str "lsum 1..5"         "15"    "$(lsum '1 2 3 4 5')"
+check_str "lproduct 1..4"     "24"    "$(lproduct '1 2 3 4')"
+check_str "lsum empty = 0"    "0"     "$(lsum '')"
+
+section "builders: replicate / intercalate / zipwith3"
+check_str "replicate 3 x"    "x x x"       "$(replicate 3 x)"
+check_str "replicate 0 x"    ""            "$(replicate 0 x)"
+check_str "intercalate -"    "1-2-3"       "$(intercalate - '1 2 3')"
+check_str "intercalate one"  "7"           "$(intercalate - '7')"
+check_str "zipwith3 a+b+c"   "111 222 333" "$(zipwith3 'echo $(($1+$2+$3))' '1 2 3' '10 20 30' '100 200 300')"
+check_str "zipwith3 min-len" "111"         "$(zipwith3 'echo $(($1+$2+$3))' '1' '10 20' '100 200 300')"
+
+section "predicate combinators: complement / conj / disj"
+check_str "complement even" "true false true false" "$(map "$(complement "$EVEN")" '1 2 3 4')"
+# the identity that justifies complement: take_until p == take_while (complement p)
+check_str "take_until == take_while∘complement" \
+    "$(take_until "$EVEN" '1 3 5 4 7')" "$(take_while "$(complement "$EVEN")" '1 3 5 4 7')"
+check_str "conj even∧<4" "false true false false false false" "$(map "$(conj "$EVEN" "$LT4")" '1 2 3 4 5 6')"
+check_str "disj even∨<4" "true true true true false true"     "$(map "$(disj "$EVEN" "$LT4")" '1 2 3 4 5 6')"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

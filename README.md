@@ -282,6 +282,21 @@ mod_add_bits4 12 11                # 7   (= 23 mod 16, computed by the 4-bit add
 
 These do arithmetic by *counting through the gates*, so they're intentionally slow and kept out of the core; their own suite is `test-alt-arithmetic.sh` (142 passing).
 
+## Combinator circuits — Layer 1 from the function side
+
+The flip side of the experimental layer: `combinator-circuits.sh` (see [`COMBINATOR_CIRCUITS.md`](COMBINATOR_CIRCUITS.md)) rebuilds Layer 1's word ops **declaratively**, from the `list-processing-kit.sh` combinators (`map`/`zipwith`/`foldl`/`scanl`) — and the test suite proves the two constructions agree bit-for-bit.
+
+```bash
+source ./combinator-circuits.sh
+
+fp_word_not "1 0 1 1"                 # = word_not        (map flip_bit)
+fp_word_xor "1 1 0 0" "1 0 1 0"       # = word_xor        (zipwith bit_xor)
+fp_word_add "1 1 0 0" "1 0 1 0"       # = word_add: 3+5   (a foldl threading the carry)
+fp_carry_chain "1 1 0 0" "1 0 1 0"    # 0 1 1 1 0         (the carry chain, via scanl)
+```
+
+The punchline: **`word_add` (Layer-1 loop) == `fp_word_add` (foldl) == `fp_word_add_scan` (scanl + zipwith3) == `ripple_add8` (chained nibbles)** — four independent constructions of the adder, one answer. Verified in `test-combinator-circuits.sh` (111 passing).
+
 ## Tests
 
 ```bash
@@ -290,6 +305,8 @@ bash test-boolean-funcs.sh
 ```
 
 Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions (incl. complement reductions `nand_all`/`nor_all`/`xnor_all` as exact negations, `all`/`any`/`none` aliases, and two-word `and_any`/`or_any`/`xor_any` cross-checked against `bits_eq` and `is_zero`), the `mux`/`word_mux` selector and `bits_min`/`bits_max` over a full grid, word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts (plus arithmetic `sar` and cyclic `rol`/`ror`), the width-generic `word_add`/`word_sub` (cross-checked bit-for-bit against `ripple_add4`/`ripple_add8`/`ripple_sub4`, and run at 8- and 16-bit width), the `zero_extend`/`sign_extend`/`trunc_bits` width bridges, the `alu4` and `alu8` ALUs (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases. The numeric layers are pinned against **independent `bc` oracles**: the base `eml(x,y)` operator against `e(x)−ln(y)`, the EML ops (`+`, `−`, `×`, `÷`, `^`, `neg`, `exp`, `ln`) against plain `bc` arithmetic — proving the `exp(x)−ln(y)` construction rebuilds ordinary math — both `eml_recip` and `eml_recip_auto` against `bc`'s `1/x`, the inverse hyperbolics against their `ln`/`sqrt` closed forms, and the derived trig (`tan`/`cot`/`sec`/`csc`) against `bc`'s `s()`/`c()` ratios. The shared `e` constant in the suite is `bc`'s `e(1)`, not `eml_e`, so the EML "= e" checks never compare the layer to itself.
+
+The slower / standalone layers have their own suites: `test-list-processing-kit.sh` (77 — the combinator kit alone, no Layer 1), `test-alt-arithmetic.sh` (142 — Peano / Church / modular), and `test-combinator-circuits.sh` (111 — the function-side `fp_*` rebuilds, each checked bit-for-bit against its Layer-1 twin).
 
 ## Attribution
 
@@ -331,6 +348,23 @@ alu4  alu8
 
 # List accessors
 lhead  ltail  first  second
+
+# List-processing kit (list-processing-kit.sh — standalone)
+map  mapcar  filter  foldl  foldr  foldl1  scanl
+zipwith  zipwith3  zip  unzip  flatten
+take  drop  take_while  drop_while  take_until  drop_until
+lrange  lreverse  iterate  replicate  intercalate
+any  all  none  count_if  elem  find_index
+and_list  or_list  lsum  lproduct  complement  conj  disj
+
+# Combinator circuits (combinator-circuits.sh — Layer 1, function-side)
+bit_and  bit_or  bit_xor  bit_xor3
+fp_word_not  fp_word_and  fp_word_or  fp_word_xor
+fp_and_all  fp_or_all  fp_xor_all
+fp_half_adder  fp_full_adder
+fp_word_add  fp_word_add_scan  fp_carry_chain
+fp_and_words  fp_or_words  fp_xor_words  fp_add_words
+fp_shl  fp_shr  fp_rol  fp_ror
 
 # EML operator
 eml  eml_exp  eml_e  eml_ln  eml_zero
