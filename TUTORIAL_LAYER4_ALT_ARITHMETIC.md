@@ -1,10 +1,13 @@
-# Alternative Arithmetic, From Scratch — A Plain-English Tutorial
+# Layer 4: Alternative Arithmetic, From Scratch — A Plain-English Tutorial
 
-*What **is** a number, really? This is the "bonus level" — a no-math walkthrough of
-three completely different answers to that question, each of which can still do
-arithmetic. If you enjoyed Tutorials 1–3 (and especially the "everything from one
-tiny piece" idea), this is the playground where we ask the same question about
-**number itself.** No equations to solve. Just three strange, beautiful ideas.*
+*Welcome to **Layer 4**. Layers 1–3 built a tower — the switches, the math operator,
+the calculator — and every floor of it ended in the same place: a number is a **row
+of bits.** Layer 4 steps off that tower to ask a stranger, deeper question: what
+**is** a number, *really?* This is a no-math walkthrough of three completely
+different answers — each one still able to do real arithmetic. If you enjoyed the
+"everything from one tiny piece" idea from the first three layers, this is the
+playground where we aim that same curiosity at **number itself.** No equations to
+solve. Just three strange, beautiful ideas that rearrange what counting even means.*
 
 ---
 
@@ -258,9 +261,9 @@ Try changing the numbers. Keep them small (these are slow!), and notice that the
 
 ---
 
-*This is the experimental wing of the project; for the precise, function-by-function
-reference (and a fourth round of "future models" to explore), see
-[`ALT_ARITHMETIC.md`](ALT_ARITHMETIC.md). And if you wandered in here first, the main
-trilogy — [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md), [`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md),
-[`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md) — builds the switches, the math operator, and
+*Layer 4 is the experimental wing of the project; for the precise, function-by-function
+reference (plus a menu of further "future models" to explore), see
+[`ALT_ARITHMETIC.md`](ALT_ARITHMETIC.md). And if you wandered into Layer 4 first, start
+with Layers 1–3 — [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md), [`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md),
+[`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md) — which build the switches, the math operator, and
 the calculator that everything here quietly stands on.*
