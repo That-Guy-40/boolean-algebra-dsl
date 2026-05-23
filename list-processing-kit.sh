@@ -12,7 +12,10 @@
 #   map / mapcar f xs                       map a unary f over a list (iter / recur)
 #   filter pred xs                          keep atoms where pred echoes "true"
 #   foldl / foldr f z xs                    left / right fold with a binary f
+#   foldl1 f xs                             foldl seeded by the first atom
+#   scanl f z xs                            the list of running fold accumulators
 #   zipwith f xs ys                         element-wise combine (length = shorter)
+#   zip / unzip / flatten                   ':'-joined tuples ↔ flat lists
 #   take / drop n xs                        prefix / suffix
 #   take_while / drop_while pred xs         …and take_until / drop_until
 #   lrange a b / lreverse xs / iterate f x n  generators
@@ -72,6 +75,18 @@ foldr () {                                # foldr F end list  (right fold)
   apply2 "$cf" "$h" "$rest"
 }
 
+foldl1 () {                               # foldl with no seed: uses the first atom (list must be non-empty)
+  local f="$1" list="$2"
+  lnull "$list" && return 1
+  foldl "$f" "$(lhead "$list")" "$(ltail "$list")"
+}
+
+scanl () {                                # scanl F z xs -> [z, F z x1, F (F z x1) x2, …]  (the running accumulators)
+  local f acc="$2" e res; f=$(as_fn2 "$1"); res="$acc"
+  for e in $3; do acc=$(apply2 "$f" "$acc" "$e"); res+=" $acc"; done
+  echo "$res"
+}
+
 zipwith () {                              # zipwith F xs ys  (F binary; element-wise; len = min)
   local f res="" i; f=$(as_fn2 "$1")
   local -a A B; read -ra A <<< "$2"; read -ra B <<< "$3"
@@ -79,6 +94,17 @@ zipwith () {                              # zipwith F xs ys  (F binary; element-
   for ((i=0; i<n; i++)); do res+=" $(apply2 "$f" "${A[i]}" "${B[i]}")"; done
   echo "${res# }"
 }
+
+# zip / unzip / flatten work over ':'-joined tuples, since a flat space-list can't
+# nest. zip pairs two lists into "a:1 b:2 …"; unzip splits back into two lines
+# (firsts, then seconds); flatten dissolves the ':' grouping into one flat list.
+zip () { zipwith 'printf "%s:%s" "$1" "$2"' "$1" "$2"; }   # ["a","b"] ["1","2"] -> "a:1 b:2"
+unzip () {                                # "a:1 b:2 c:3" -> two lines: "a b c" then "1 2 3"
+  local fst="" snd="" e
+  for e in $1; do fst+=" ${e%%:*}"; snd+=" ${e#*:}"; done
+  printf '%s\n%s\n' "${fst# }" "${snd# }"
+}
+flatten () { local s="${1//:/ }"; echo $s; }              # "1:a 2:b" -> "1 a 2 b" (split atoms on ':')
 
 take () { local n="$1" res="" e i=0; for e in $2; do [ "$i" -ge "$n" ] && break; res+=" $e"; i=$((i+1)); done; echo "${res# }"; }
 drop () { local n="$1" res="" e i=0; for e in $2; do [ "$i" -ge "$n" ] && res+=" $e"; i=$((i+1)); done; echo "${res# }"; }

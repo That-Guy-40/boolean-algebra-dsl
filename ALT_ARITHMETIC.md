@@ -87,7 +87,9 @@ and composition becomes string-building:
 | `map`/`mapcar f xs` | map (iterative/recursive) | a unary `f` over a list |
 | `filter pred xs` | filter | keep atoms where `pred` echoes `true` |
 | `foldl`/`foldr f z xs` | left/right fold | with a binary `f` |
+| `foldl1 f xs` / `scanl f z xs` | seedless fold / running accumulators | |
 | `zipwith f xs ys` | element-wise combine | length = shorter list |
+| `zip`/`unzip`/`flatten` | tuples ↔ flat lists | `':'`-joined pairs |
 | `take`/`drop n xs` | prefix / suffix | also `take_while`/`take_until`, `drop_while`/`drop_until pred xs` |
 | `lrange a b` / `lreverse` / `iterate f x n` | generators | range, reverse, `[x, f x, f²x, …]` |
 | `any`/`all pred xs` | exists / forall | over a predicate |
@@ -97,7 +99,8 @@ fn value** (`as_fn`/`as_fn2` normalise the two). The five core combinators
 (`FN_ID`/`apply`/`apply2`/`lift`/`compose`) live in `alt-arithmetic.sh` since the
 Church layer needs them; everything from `as_fn` down — the Scheme-style list
 toolkit — lives in **`list-processing-kit.sh`**, which `alt-arithmetic.sh` sources
-(so it's reusable on its own, and available alongside the arithmetic models).
+(so it's reusable on its own, and available alongside the arithmetic models). The
+kit is exercised in isolation by `test-list-processing-kit.sh` (50 passing).
 
 ```bash
 apply   "$(compose "$INC" "$DBL")" 5    # 11   (inc∘double: 2·5+1)
@@ -153,8 +156,9 @@ church_to_int "$(church_sub  "$(int_to_church 2)" "$(int_to_church 5)")"    # 0 
 
 Combinator layer: `FN_ID` `apply` `apply2` `lift` `compose` `as_fn`/`as_fn2`;
 list toolkit `lnull` `lhead` `ltail` `llength` `map` `mapcar` `filter` `foldl`
-`foldr` `zipwith` `take`/`drop` `take_while`/`drop_while` `take_until`/`drop_until`
-`lrange` `lreverse` `iterate` `any`/`all`. Church: `church_iter` `church_zero/one/succ` `church_plus/mult/pow`
+`foldr` `foldl1` `scanl` `zipwith` `zip` `unzip` `flatten` `take`/`drop`
+`take_while`/`drop_while` `take_until`/`drop_until` `lrange` `lreverse` `iterate`
+`any`/`all`. Church: `church_iter` `church_zero/one/succ` `church_plus/mult/pow`
 `church_pred/sub` `church_is_zero`; booleans `CHURCH_TRUE/FALSE` `church_if`
 `church_band/bor/bnot` `church_to_bool`; pairs `cons/car/cdr`; bridges
 `int_to_church` / `church_to_int` / `church_to_bits`. (Numerals and booleans are
