@@ -737,6 +737,35 @@ section "EML mul/div inverses"
 check_float "x * (1/x) = 1  [x=3]" 1 "$(eml_mul 3 "$(eml_div 3)")" "$T"
 check_float "x * (1/x) = 1  [x=7]" 1 "$(eml_mul 7 "$(eml_div 7)")" "$T"
 
+# ── 5a-ii. EML reconstructs ordinary arithmetic (independent bc oracle) ────────
+# The thesis of the EML layer is that exp(x) - ln(y) alone rebuilds +, -, *, /.
+# The inverse checks above are self-referential (eml_mul vs eml_div); these
+# instead pin each op against PLAIN bc arithmetic, an oracle that shares no code
+# with the multi-step eml constructions. Domains: eml_add/sub/div need arg1 > 0,
+# eml_mul needs arg1 > 1 (so ln(arg1) > 0 for eml_add's domain).
+section "EML ops vs plain bc arithmetic (+, -, *, /, ^, neg, exp, ln)"
+for pair in "3 4" "5 2" "1.5 0.5" "10 7"; do
+    set -- $pair
+    check_float "eml_add($1,$2) = $1+$2" "$(echo "$1+$2" | bc -l)" "$(eml_add "$1" "$2")"
+    check_float "eml_sub($1,$2) = $1-$2" "$(echo "$1-$2" | bc -l)" "$(eml_sub "$1" "$2")"
+done
+for pair in "3 4" "2 5" "1.5 6" "10 0.25"; do
+    set -- $pair
+    check_float "eml_mul($1,$2) = $1*$2" "$(echo "$1*$2" | bc -l)" "$(eml_mul "$1" "$2")"
+done
+for z in 2 3 4 1.5 10 0.5; do
+    check_float "eml_div($z) = 1/$z" "$(echo "1/$z" | bc -l)" "$(eml_div "$z")"
+done
+for z in 3 -2 0.5; do
+    check_float "eml_neg($z) = -$z" "$(echo "0-($z)" | bc -l)" "$(eml_neg "$z")"
+done
+for x in 0 1 2 -1; do
+    check_float "eml_exp($x) = e^$x" "$(echo "e($x)" | bc -l)" "$(eml_exp "$x")"
+done
+for x in 1 2 5 0.5; do
+    check_float "eml_ln($x) = ln($x)" "$(echo "l($x)" | bc -l)" "$(eml_ln "$x")" 0.000001
+done
+
 # ── 5b. EML applications (iterative algorithms on the EML layer) ───────────────
 # eml_pow_int: integer powers via repeated eml_mul.
 # eml_recip:   Newton's reciprocal iteration y <- y*(2 - x*y), no division.
@@ -748,6 +777,11 @@ check_float "1.5^2 = 2.25"  2.25   "$(eml_pow_int 1.5 2)"  "$T"
 check_float "1.5^3 = 3.375" 3.375  "$(eml_pow_int 1.5 3)"  "$T"
 check_float "2^5   = 32"    32     "$(eml_pow_int 2 5)"    0.0000001
 check_float "3^4   = 81"    81     "$(eml_pow_int 3 4)"    0.0000001
+# Cross-checked against bc's ^ operator over more bases/exponents.
+for pair in "1.5 3" "2 5" "3 4" "1.2 6"; do
+    set -- $pair
+    check_float "eml_pow_int($1,$2) = $1^$2" "$(echo "$1^$2" | bc -l)" "$(eml_pow_int "$1" "$2")" 0.000001
+done
 
 section "eml_recip (Newton 1/x) agrees with eml_div"
 # The iterative reciprocal must converge to the same value as the direct eml_div.
@@ -772,6 +806,8 @@ section "eml_recip_auto (comparator-seeded reciprocal) = eml_div"
 # several power-of-two brackets, including the boundaries (63 vs 64, x near 2).
 for x in 1.5 1.99 4 10 63 64 100 1000; do
     check_float "recip_auto($x) = 1/$x" "$(eml_div "$x")" "$(eml_recip_auto "$x")" 0.000000001
+    # Independent oracle: bc's 1/x, sharing no code with eml_div or the Newton loop.
+    check_float "recip_auto($x) = 1/$x [bc]" "$(echo "1/$x" | bc -l)" "$(eml_recip_auto "$x")" 0.000000001
 done
 
 # ── 6. Math library — constants & roots ───────────────────────────────────────
@@ -835,6 +871,14 @@ check_float "tan(pi/4) = 1"     1   "$(tan "$(echo "a(1)" | bc -l)")"   "$T"
 check_float "sec(0)    = 1"     1   "$(sec 0)"                           "$T"
 check_float "csc(pi/2) = 1"     1   "$(csc "$HALF_PI")"                  "$T"
 check_float "cot(pi/4) = 1"     1   "$(cot "$(echo "a(1)" | bc -l)")"   "$T"
+# These four are derived from sin/cos; pin them against bc's s()/c() forms over a
+# range (not just one angle) so a wrong reciprocal or ratio would surface.
+for x in 0.3 0.7 1.0 1.3 -0.5; do
+    check_float "tan($x) = s/c" "$(echo "s($x)/c($x)" | bc -l)" "$(tan "$x")"
+    check_float "cot($x) = c/s" "$(echo "c($x)/s($x)" | bc -l)" "$(cot "$x")"
+    check_float "sec($x) = 1/c" "$(echo "1/c($x)"     | bc -l)" "$(sec "$x")"
+    check_float "csc($x) = 1/s" "$(echo "1/s($x)"     | bc -l)" "$(csc "$x")"
+done
 
 section "Odd / even symmetry"
 # sin, tan are odd: f(-x) = -f(x). cos is even: f(-x) = f(x).
@@ -951,6 +995,20 @@ check_float "atanh(0) = 0"  0  "$(atanh 0)"  "$T"
 check_float "asinh(1) ~ 0.8814" 0.88137358701954 "$(asinh 1)" 0.000000001
 check_float "acosh(2) ~ 1.3170" 1.31695789692481 "$(acosh 2)" 0.000000001
 check_float "atanh(.5) ~ 0.5493" 0.54930614433405 "$(atanh .5)" 0.000000001
+
+# Direct vs the closed forms built straight from bc's l()/sqrt(). The round-trip
+# section below could in principle pass with a forward/inverse pair that are both
+# wrong but cancel; comparing to the standalone formula rules that out.
+#   asinh(x) = ln(x + √(x²+1)),  acosh(x) = ln(x + √(x²−1)),  atanh(x) = ½ln((1+x)/(1−x))
+for x in 0.5 1 2 -1 3; do
+    check_float "asinh($x) vs ln(x+√(x²+1))" "$(echo "l($x + sqrt($x*$x + 1))" | bc -l)" "$(asinh "$x")"
+done
+for x in 1 1.5 2 3 5; do
+    check_float "acosh($x) vs ln(x+√(x²−1))" "$(echo "l($x + sqrt($x*$x - 1))" | bc -l)" "$(acosh "$x")"
+done
+for x in 0 0.3 0.7 -0.5 0.9; do
+    check_float "atanh($x) vs ½ln((1+x)/(1−x))" "$(echo "0.5*l((1+($x))/(1-($x)))" | bc -l)" "$(atanh "$x")"
+done
 
 section "Round-trip: f(f_inv(x)) = x"
 # f(f⁻¹(x)) = x is the strongest correctness check: it composes the forward and
