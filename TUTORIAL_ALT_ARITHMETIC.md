@@ -10,11 +10,20 @@ tiny piece" idea), this is the playground where we ask the same question about
 
 ## How to follow along
 
-Open a terminal in this folder and load the experimental layer:
+Open a terminal in this folder, load the experimental layer, and define two
+**shorthands** the Church examples lean on (the real names — `int_to_church` /
+`church_to_int` — are a mouthful, so `ch`/`n` keep the examples readable):
 
 ```bash
 source ./alt-arithmetic.sh
+ch () { int_to_church "$1"; }    # ch N : make the Church number N
+n  () { church_to_int  "$1"; }    # n  X : read a Church number back as a decimal
 ```
+
+> **Run that whole block once** at the start of your session. `ch` and `n` are
+> tutorial conveniences, **not** part of the library — so if you paste a later
+> example on its own and bash says `ch: command not found`, you skipped this setup.
+> (Anywhere you like, you can also just write the full `int_to_church`/`church_to_int`.)
 
 `Try it ▶` boxes are things to type and watch. Same game as before: *poke it,
 watch it, believe it.*
@@ -92,9 +101,10 @@ action and repeat it this many times"*?
 That's a **Church numeral**. The number `3` *is* "do it three times." It doesn't
 care what "it" is — give `3` any action, and it'll do that action three times.
 
-`Try it ▶`  *(give the number 5 a "stick a star on the end" action)*
+`Try it ▶`  *(give the number 5 a "stick a star on the end" action; `ch` is the
+shorthand from setup)*
 ```bash
-apply "$(apply "$(int_to_church 5)" 'printf "%s*" "$1"')" ""   # *****
+apply "$(apply "$(ch 5)" 'printf "%s*" "$1"')" ""   # *****
 ```
 
 The number 5, handed a star-stamping action, stamped exactly five stars. It's a
@@ -106,13 +116,8 @@ So how do you do *arithmetic* with verbs? You compose the repetitions:
 - **multiply** = "do (*add m*) `n` times,"
 - **power** = "do (*times b*) `e` times."
 
-To keep the typing readable, give yourself two shorthands first:
-
-`Try it ▶`
+`Try it ▶`  *(using the `ch`/`n` shorthands you defined in setup)*
 ```bash
-ch () { int_to_church "$1"; }    # make a Church number
-n  () { church_to_int  "$1"; }    # read one back as a decimal
-
 n "$(church_plus "$(ch 2)" "$(ch 3)")"   # 5
 n "$(church_mult "$(ch 3)" "$(ch 4)")"   # 12
 n "$(church_pow  "$(ch 2)" "$(ch 5)")"   # 32
