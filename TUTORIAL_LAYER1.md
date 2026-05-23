@@ -447,6 +447,16 @@ gets added.** It's switches all the way down, plus the patience to wire them
 cleverly. That's the secret of computers — not that they're smart, but that
 simple yes/no rules, stacked high enough, *look* like intelligence.
 
+> **A mirror-image world (for later).** Everything here grew from one tiny piece — a
+> **switch** — stacked cleverly. Astonishingly, there's a *completely different*
+> starting piece that builds all the same things: not a switch, but a tiny
+> **function**, a little machine that takes a machine and hands one back. That mirror
+> image is the **function-side twin of Layer 1**, with its own plain-English
+> walkthrough in **[`TUTORIAL_LAYER6_LAMBDA.md`](TUTORIAL_LAYER6_LAMBDA.md)**: same
+> destination (numbers, true/false, arithmetic), opposite starting point. The
+> jaw-dropper is that the two turn out to be *exactly as powerful as each other* — one
+> of the deepest facts in all of computing.
+
 ---
 
 ## Try it all yourself
