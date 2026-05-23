@@ -246,6 +246,27 @@ sigmoid 2    # 0.8808…
 sigmoid -2   # 0.1192…  (symmetric: σ(-x) = 1 - σ(x))
 ```
 
+## Experimental — alternative arithmetic
+
+A separate, optional layer (`alt-arithmetic.sh`, see [`ALT_ARITHMETIC.md`](ALT_ARITHMETIC.md)) plays with **other ways to define number**, each wired back down into the Boolean layer:
+
+```bash
+source ./alt-arithmetic.sh
+
+# Peano — number = zero + successor; successor IS the Layer-1 ripple-carry +1
+peano_to_int "$(peano_mult "$(int_to_peano 3)" "$(int_to_peano 4)")"   # 12
+
+# Church — number = repeated application; the numeral can drive the inc circuit
+church_expt 2 5                    # 32
+bits_to_int "$(church_to_bits 5)"  # 5   (a Church numeral built the bits via inc)
+
+# Modular — clock arithmetic; fixed-width binary already IS arithmetic mod 2^W
+mod_pow 2 10 1000                  # 24
+mod_add_bits4 12 11                # 7   (= 23 mod 16, computed by the 4-bit adder)
+```
+
+These do arithmetic by *counting through the gates*, so they're intentionally slow and kept out of the core; their own suite is `test-alt-arithmetic.sh` (56 passing).
+
 ## Tests
 
 ```bash
