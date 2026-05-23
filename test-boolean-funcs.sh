@@ -108,6 +108,17 @@ sub_signed() {
     echo "$mag"
 }
 
+# word_signed "b0 b1 .. b{w-1}": interpret a plain LSB-first word (with NO trailing
+# carry field) as a signed two's-complement integer. Used for sar / sign_extend
+# checks, where the value can be negative. (sub_signed is its cousin, for the
+# "diff bits + carry-out" shape that ripple_sub*/word_sub emit.)
+word_signed() {
+    local -a A; read -ra A <<< "$1"
+    local w=${#A[@]} mag; mag=$(bits_to_dec "$1")
+    [ "$w" -gt 0 ] && [ "${A[w-1]}" = 1 ] && mag=$(( mag - (1 << w) ))
+    echo "$mag"
+}
+
 # Precompute shared constants once. Many tests need these, and each bc call
 # carries process-spawn overhead in a shell loop.
 PI=$(pi)
@@ -677,6 +688,94 @@ check_str "xor 6^6 -> 0 (Z=1)"   "0 0 0 0 1 0 0 0" "$(alu4 xor $(dec_to_bits 6 4
 check_str "add 8+8 wraps (Z,C,V)" "0 0 0 0 1 1 0 1" "$(alu4 add $(dec_to_bits 8 4) $(dec_to_bits 8 4))"
 # Unknown opcode is rejected.
 check_exit "alu4 bad op -> exit 2" 2 alu4 frobnicate 0 0 0 0 0 0 0 0
+
+# ── 4b. Width-generic add/sub, arithmetic shift, rotates, width bridges, alu8 ──
+# The 8-bit tier (TODO 3). word_add/word_sub are the width-generic ripple add/sub;
+# they are cross-checked bit-for-bit against the fixed-width ripple_add4/ripple_add8
+# and ripple_sub4 — two constructions of the same circuit, proven to agree.
+
+section "word_add — matches ripple_add4 across a 4-bit grid"
+for a in 0 1 5 8 15; do
+  for b in 0 3 7 15; do
+    check_str "word_add $a+$b == ripple_add4" \
+        "$(ripple_add4 $(dec_to_bits "$a" 4) $(dec_to_bits "$b" 4))" \
+        "$(word_add "$(dec_to_bits "$a" 4)" "$(dec_to_bits "$b" 4)")"
+  done
+done
+check_str "word_add 3+5+Cin1 = 9" "9" "$(bits_to_dec "$(word_add "$(dec_to_bits 3 4)" "$(dec_to_bits 5 4)" 1)")"
+# Unequal widths: the shorter operand's missing high bits read as 0.
+check_str "word_add 1 + 7 (1-bit + 3-bit) = 8" "8" "$(bits_to_dec "$(word_add "1" "1 1 1")")"
+
+section "word_add — 8-bit and beyond (the point of width-genericity)"
+check_str "word_add 200+100 (8b) = 300" "300" "$(bits_to_dec "$(word_add "$(dec_to_bits 200 8)" "$(dec_to_bits 100 8)")")"
+check_str "word_add 255+1   (8b) = 256" "256" "$(bits_to_dec "$(word_add "$(dec_to_bits 255 8)" "$(dec_to_bits 1 8)")")"
+check_str "word_add 255+255 (8b) = 510" "510" "$(bits_to_dec "$(word_add "$(dec_to_bits 255 8)" "$(dec_to_bits 255 8)")")"
+check_str "word_add == ripple_add8 (200+100)" \
+    "$(ripple_add8 $(dec_to_bits 200 8) $(dec_to_bits 100 8))" \
+    "$(word_add "$(dec_to_bits 200 8)" "$(dec_to_bits 100 8)")"
+# Same function, no signature change, adds 16-bit words:
+check_str "word_add 1000+1000 (16b) = 2000"   "2000"  "$(bits_to_dec "$(word_add "$(dec_to_bits 1000 16)"  "$(dec_to_bits 1000 16)")")"
+check_str "word_add 30000+5000 (16b) = 35000" "35000" "$(bits_to_dec "$(word_add "$(dec_to_bits 30000 16)" "$(dec_to_bits 5000 16)")")"
+
+section "word_sub — two's complement (matches ripple_sub4; signed via sub_signed)"
+check_str "word_sub 5-3 (4b) == ripple_sub4" \
+    "$(ripple_sub4 $(dec_to_bits 5 4) $(dec_to_bits 3 4))" \
+    "$(word_sub "$(dec_to_bits 5 4)" "$(dec_to_bits 3 4)")"
+check_str "word_sub 5-3    =  2"  "2"   "$(sub_signed "$(word_sub "$(dec_to_bits 5 4)"   "$(dec_to_bits 3 4)")"   4)"
+check_str "word_sub 3-5    = -2"  "-2"  "$(sub_signed "$(word_sub "$(dec_to_bits 3 4)"   "$(dec_to_bits 5 4)")"   4)"
+check_str "word_sub 100-50 (8b) =  50"  "50"   "$(sub_signed "$(word_sub "$(dec_to_bits 100 8)" "$(dec_to_bits 50 8)")"  8)"
+check_str "word_sub 50-100 (8b) = -50"  "-50"  "$(sub_signed "$(word_sub "$(dec_to_bits 50 8)"  "$(dec_to_bits 100 8)")" 8)"
+check_str "word_sub 0-1   (8b)  = -1"   "-1"   "$(sub_signed "$(word_sub "$(dec_to_bits 0 8)"   "$(dec_to_bits 1 8)")"   8)"
+check_str "word_sub no-borrow flag (100>=50 -> Cout 1)" "1" "$(word_sub "$(dec_to_bits 100 8)" "$(dec_to_bits 50 8)"  | cut -d' ' -f9)"
+check_str "word_sub borrow flag    (50<100  -> Cout 0)" "0" "$(word_sub "$(dec_to_bits 50 8)"  "$(dec_to_bits 100 8)" | cut -d' ' -f9)"
+
+section "sar — arithmetic (sign-replicating) shift right"
+check_str "sar -4>>1  (4b) = -2"   "-2"  "$(word_signed "$(sar "$(dec_to_bits 12 4)")")"      # 12 = -4 in 4-bit
+check_str "sar -8>>2  (4b) = -2"   "-2"  "$(word_signed "$(sar "$(dec_to_bits 8 4)" 2)")"
+check_str "sar -1>>1  (8b) = -1"   "-1"  "$(word_signed "$(sar "$(dec_to_bits 255 8)")")"     # -1 stays -1
+check_str "sar -100>>2 (8b) = -25" "-25" "$(word_signed "$(sar "$(dec_to_bits 156 8)" 2)")"   # 156 = -100 in 8-bit
+# On a non-negative value sar agrees with the logical shr (the sign bit is 0).
+check_str "sar == shr when positive (6, 8b)" "$(shr "$(dec_to_bits 6 8)")" "$(sar "$(dec_to_bits 6 8)")"
+
+section "rol / ror — cyclic rotates"
+check_str "rol 1<<1 (4b) = 2"               "2" "$(bits_to_dec "$(rol "$(dec_to_bits 1 4)")")"
+check_str "rol wraps MSB->LSB (8, 4b) = 1"  "1" "$(bits_to_dec "$(rol "$(dec_to_bits 8 4)")")"
+check_str "ror 1>>1 (4b) wraps to 8"        "8" "$(bits_to_dec "$(ror "$(dec_to_bits 1 4)")")"
+check_str "ror(rol w) = identity"     "1 0 1 1"          "$(ror "$(rol "1 0 1 1")")"
+check_str "rol by full width = identity" "1 0 1 1 0 0 1 0" "$(rol "1 0 1 1 0 0 1 0" 8)"
+check_str "rol preserves popcount" "$(popcount "0 1 1 0 1 0 0 1")" "$(popcount "$(rol "0 1 1 0 1 0 0 1" 3)")"
+
+section "width bridges — zero_extend / sign_extend / trunc_bits"
+check_str "zero_extend 5 (4b->8) preserves unsigned value" "5" "$(bits_to_int "$(zero_extend "$(dec_to_bits 5 4)" 8)")"
+check_str "zero_extend pads with 0"  "1 0 1 0 0 0 0 0" "$(zero_extend "$(dec_to_bits 5 4)" 8)"
+check_str "sign_extend -4 (4b->8) preserves signed value" "-4" "$(word_signed "$(sign_extend "$(dec_to_bits 12 4)" 8)")"
+check_str "sign_extend  5 (4b->8) preserves signed value"  "5" "$(word_signed "$(sign_extend "$(dec_to_bits 5 4)" 8)")"
+check_str "sign_extend replicates the sign bit" "0 0 1 1 1 1 1 1" "$(sign_extend "$(dec_to_bits 12 4)" 8)"
+check_str "trunc_bits 250 (8b->4) = 10 (mod 16)" "10" "$(bits_to_int "$(trunc_bits "$(dec_to_bits 250 8)" 4)")"
+check_str "sign_extend then trunc_bits round-trips" "1 0 1 0" "$(trunc_bits "$(sign_extend "1 0 1 0" 8)" 4)"
+check_str "int_to_bits 200 8 -> bits_to_int round-trips" "200" "$(bits_to_int "$(int_to_bits 200 8)")"
+
+section "alu8 — result + flags (R0..R7 Z C N V)"
+check_str "add 3+5    -> 8"          "0 0 0 1 0 0 0 0 0 0 0 0" "$(alu8 add $(dec_to_bits 3 8)   $(dec_to_bits 5 8))"
+check_str "add 100+50 -> 150 (N,V)"  "0 1 1 0 1 0 0 1 0 0 1 1" "$(alu8 add $(dec_to_bits 100 8) $(dec_to_bits 50 8))"
+check_str "sub 100-50 -> 50 (C=1)"   "0 1 0 0 1 1 0 0 0 1 0 0" "$(alu8 sub $(dec_to_bits 100 8) $(dec_to_bits 50 8))"
+check_str "sub 50-100 -> -50 (N=1)"  "0 1 1 1 0 0 1 1 0 0 1 0" "$(alu8 sub $(dec_to_bits 50 8)  $(dec_to_bits 100 8))"
+check_str "and 200&100 -> 64"        "0 0 0 0 0 0 1 0 0 0 0 0" "$(alu8 and $(dec_to_bits 200 8) $(dec_to_bits 100 8))"
+check_str "or  12|3   -> 15"         "1 1 1 1 0 0 0 0 0 0 0 0" "$(alu8 or  $(dec_to_bits 12 8)  $(dec_to_bits 3 8))"
+check_str "xor 6^6    -> 0 (Z=1)"    "0 0 0 0 0 0 0 0 1 0 0 0" "$(alu8 xor $(dec_to_bits 6 8)   $(dec_to_bits 6 8))"
+check_str "not 3      -> 252 (N=1)"  "0 0 1 1 1 1 1 1 0 0 1 0" "$(alu8 not $(dec_to_bits 3 8)   $(dec_to_bits 0 8))"
+check_str "slt 3<5    -> 1"          "1 0 0 0 0 0 0 0 0 0 0 0" "$(alu8 slt $(dec_to_bits 3 8)   $(dec_to_bits 5 8))"
+check_str "slt 5<3    -> 0 (Z=1)"    "0 0 0 0 0 0 0 0 1 0 0 0" "$(alu8 slt $(dec_to_bits 5 8)   $(dec_to_bits 3 8))"
+check_str "shl 3      -> 6"          "0 1 1 0 0 0 0 0 0 0 0 0" "$(alu8 shl $(dec_to_bits 3 8)   $(dec_to_bits 0 8))"
+check_str "shr 3      -> 1 (C=1)"    "1 0 0 0 0 0 0 0 0 1 0 0" "$(alu8 shr $(dec_to_bits 3 8)   $(dec_to_bits 0 8))"
+
+section "alu8 — flag spot checks"
+# 200+100 = 300 wraps mod 256 to 44: unsigned carry C=1, no signed overflow (operands differ in sign).
+check_str "add 200+100 wraps -> 44 (C=1)"   "0 0 1 1 0 1 0 0 0 1 0 0" "$(alu8 add $(dec_to_bits 200 8) $(dec_to_bits 100 8))"
+# 128+128 = 256 wraps to 0: carry C=1, signed overflow V=1 (two negatives summing to positive), zero Z=1.
+check_str "add 128+128 wraps -> 0 (Z,C,V)"  "0 0 0 0 0 0 0 0 1 1 0 1" "$(alu8 add $(dec_to_bits 128 8) $(dec_to_bits 128 8))"
+# Unknown opcode is rejected, exactly like alu4.
+check_exit "alu8 bad op -> exit 2" 2 alu8 frobnicate 0 0 0 0 0 0 0 0  0 0 0 0 0 0 0 0
 
 # ── 5. EML operator ───────────────────────────────────────────────────────────
 # eml(x,y) = exp(x) - ln(y). The EML operator is "functionally complete" in the

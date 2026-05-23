@@ -122,6 +122,11 @@ ripple_add4 1 1 1 1  1 0 0 0    # 15 + 1 -> "0 0 0 0 1"  (= 16, carry set)
 # ripple_sub4 / ripple_sub8: A - B via A + (~B) + 1 (flip B bits, force Cin=1)
 # Trailing carry-out is the borrow flag: 1 = no borrow (A>=B), 0 = borrow (A<B)
 
+# word_add / word_sub: the SAME ripple adder, width-generic — two bit STRINGS of any
+# width (4, 8, 16, …) instead of fixed positional bits. Output: result bits + carry.
+word_add "1 1 0 0" "1 0 1 0"                            # 3 + 5 (4-bit) -> "0 0 0 1 0" (= 8)
+word_add "$(int_to_bits 200 8)" "$(int_to_bits 100 8)"  # 8-bit -> decodes to 300 (carry set)
+
 # compare4 / compare8: echo lt / eq / gt
 compare4 1 0 1 0  1 1 0 0       # 5 vs 3 -> "gt"
 compare4 0 0 0 1  1 1 1 0       # 8 vs 7 -> "gt"  (decided at the MSB)
@@ -146,7 +151,7 @@ bits_max "1 1 0 0" "1 0 1 0"    # "1 0 1 0"   (max(3,5) = 5)
 
 ### Shifts and the ALU
 
-`shl` / `shr` are width-preserving logical shifts. The capstone is **`alu4`** — a 4-bit arithmetic-logic unit whose data path is built entirely from the circuits above (ripple adder/subtractor, word-level bitwise ops, the comparator for `slt`, the shifters) plus `is_zero` for a status flag:
+`shl` / `shr` are width-preserving logical shifts; `sar` is the arithmetic (sign-replicating) right shift, and `rol` / `ror` rotate cyclically. The capstone is **`alu4`** — a 4-bit arithmetic-logic unit whose data path is built entirely from the circuits above (ripple adder/subtractor, word-level bitwise ops, the comparator for `slt`, the shifters) plus `is_zero` for a status flag:
 
 ```bash
 # alu4 OP  A0 A1 A2 A3  B0 B1 B2 B3   ->   "R0 R1 R2 R3 Z C N V"
@@ -160,6 +165,16 @@ alu4 slt 1 1 0 0  1 0 1 0    # 3<5  -> "1 0 0 0 0 0 0 0"  (set: 1)
 ```
 
 The `add 3+5` result shows the flags working: 8 is outside signed 4-bit's −8..+7 range, so the overflow flag `V` and negative flag `N` both fire.
+
+**`alu8`** is the byte-width sibling — the same nine ops and four flags over 8-bit words, built on the width-generic `word_add` / `word_sub`. Step a value between widths with `zero_extend`, `sign_extend`, and `trunc_bits`:
+
+```bash
+# alu8 OP  A0..A7  B0..B7   ->   "R0..R7 Z C N V"   (same op set / flags as alu4)
+alu8 add $(int_to_bits 100 8) $(int_to_bits 50 8)   # 150 -> "... 0 0 1 1"  (N,V: >127)
+alu8 add $(int_to_bits 128 8) $(int_to_bits 128 8)  # 256 wraps to 0 -> Z=C=V=1
+
+sign_extend "$(int_to_bits 12 4)" 8   # -4 in 4-bit  -> "0 0 1 1 1 1 1 1"  (still -4)
+```
 
 ## Layer 2 — EML Operator
 
@@ -274,7 +289,7 @@ bash test-boolean-funcs.sh
 # 952 passed, 0 failed
 ```
 
-Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions (incl. complement reductions `nand_all`/`nor_all`/`xnor_all` as exact negations, `all`/`any`/`none` aliases, and two-word `and_any`/`or_any`/`xor_any` cross-checked against `bits_eq` and `is_zero`), the `mux`/`word_mux` selector and `bits_min`/`bits_max` over a full grid, word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts, the `alu4` ALU (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases. The numeric layers are pinned against **independent `bc` oracles**: the base `eml(x,y)` operator against `e(x)−ln(y)`, the EML ops (`+`, `−`, `×`, `÷`, `^`, `neg`, `exp`, `ln`) against plain `bc` arithmetic — proving the `exp(x)−ln(y)` construction rebuilds ordinary math — both `eml_recip` and `eml_recip_auto` against `bc`'s `1/x`, the inverse hyperbolics against their `ln`/`sqrt` closed forms, and the derived trig (`tan`/`cot`/`sec`/`csc`) against `bc`'s `s()`/`c()` ratios. The shared `e` constant in the suite is `bc`'s `e(1)`, not `eml_e`, so the EML "= e" checks never compare the layer to itself.
+Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions (incl. complement reductions `nand_all`/`nor_all`/`xnor_all` as exact negations, `all`/`any`/`none` aliases, and two-word `and_any`/`or_any`/`xor_any` cross-checked against `bits_eq` and `is_zero`), the `mux`/`word_mux` selector and `bits_min`/`bits_max` over a full grid, word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts (plus arithmetic `sar` and cyclic `rol`/`ror`), the width-generic `word_add`/`word_sub` (cross-checked bit-for-bit against `ripple_add4`/`ripple_add8`/`ripple_sub4`, and run at 8- and 16-bit width), the `zero_extend`/`sign_extend`/`trunc_bits` width bridges, the `alu4` and `alu8` ALUs (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases. The numeric layers are pinned against **independent `bc` oracles**: the base `eml(x,y)` operator against `e(x)−ln(y)`, the EML ops (`+`, `−`, `×`, `÷`, `^`, `neg`, `exp`, `ln`) against plain `bc` arithmetic — proving the `exp(x)−ln(y)` construction rebuilds ordinary math — both `eml_recip` and `eml_recip_auto` against `bc`'s `1/x`, the inverse hyperbolics against their `ln`/`sqrt` closed forms, and the derived trig (`tan`/`cot`/`sec`/`csc`) against `bc`'s `s()`/`c()` ratios. The shared `e` constant in the suite is `bc`'s `e(1)`, not `eml_e`, so the EML "= e" checks never compare the layer to itself.
 
 ## Attribution
 
@@ -302,16 +317,17 @@ parity  popcount  lsb  msb
 
 # Adders, subtractors & comparators (LSB-first bit strings)
 half_adder  full_adder
-ripple_add4  ripple_add8
+ripple_add4  ripple_add8       word_add  word_sub   # word_add/sub: width-generic
 flip_bit  ripple_sub4  ripple_sub8
 bit_to_bool  bits_eq  bits_gt  compare4  compare8
-int_to_bits
+int_to_bits  zero_extend  sign_extend  trunc_bits
 
 # Multiplexer, min & max
 mux  word_mux  bits_min  bits_max
 
 # Shifts & ALU
-shl  shr  alu4
+shl  shr  sar  rol  ror
+alu4  alu8
 
 # List accessors
 lhead  ltail  first  second

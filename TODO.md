@@ -9,7 +9,7 @@ and the function side (the combinator layer + Church numerals/booleans/pairs in
 
 **Working convention** (so each layer stays understandable and self-contained):
 - Each new layer gets **its own `.sh` file**, sourcing what it builds on.
-- Each gets **its own test file** (`test-*.sh`), kept out of the fast 952-test core
+- Each gets **its own test file** (`test-*.sh`), kept out of the fast 1022-test core
   if it's slow/experimental.
 - Each eventually gets a **plain-English `TUTORIAL_*.md`** in the Layer 1–3 voice.
 - **Wire down** into existing layers wherever natural (the recurring theme: a new
@@ -89,10 +89,10 @@ core), `test-lambda.sh`, later `TUTORIAL_LAMBDA.md`.
 > byte-level conveniences — not a rewrite. *(Foundational and independent — this
 > doesn't block the capstone, but a richer bit layer makes it land harder.)*
 
-**Files:** extend `boolean-funcs-new.sh` + `test-boolean-funcs.sh` in place (these are
-fast, pure Layer 1 — they stay in the 952-test core).
+**Files:** extended `boolean-funcs-new.sh` + `test-boolean-funcs.sh` in place (these
+are fast, pure Layer 1 — they stay in the now-1022-test core).
 
-**Width audit (current state — the grounding for this TODO):**
+**Width audit (state *before* this work — the grounding for the TODO):**
 - *Already arbitrary-width* (consume a space-separated string of any length):
   `word_not/and/or/xor/zip`, every `*_all` reduction (`and_all`/`or_all`/`xor_all`/
   `is_zero`/…), `inc`/`dec`/`negate`, the `is_*` predicates, `parity`/`popcount`/
@@ -100,27 +100,30 @@ fast, pure Layer 1 — they stay in the 952-test core).
   `shl`/`shr`, and `int_to_bits N [width]`. These already work at 8 bits today.
 - *Pinned to a fixed width* (positional args): `ripple_add4`/`ripple_add8`,
   `ripple_sub4`/`ripple_sub8`, `compare4`/`compare8` (positional wrappers), and
-  **`alu4` (4-bit only — the main gap).**
+  `alu4` (4-bit only — the main gap, now joined by `alu8`).
 
-**Tasks:**
-- [ ] **`alu8`** — an 8-bit ALU mirroring `alu4`: same op set (`add sub and or xor
-      not slt shl shr`), output `R0..R7 Z C N V`, built on `ripple_add8`/`ripple_sub8`
-      and the (already generic) word ops. Document that the flags are byte-width.
-- [ ] **Width-generic `word_add` / `word_sub`** taking two equal-width LSB-first
-      strings (→ result + carry/borrow), so 8-bit (or any-bit) addition needs no
-      17-positional-arg call; make `ripple_add4`/`ripple_add8` thin wrappers over it.
-      *(Heads-up: this is the same n-bit adder TODO 4 builds from the function side —
-      see the cross-note there; building both and asserting they agree is the point.)*
-- [ ] **Arithmetic shift right `sar`** (sign-replicating — two's-complement ÷2ⁿ) to
-      complement the logical `shl`/`shr`; optional **rotates** `rol`/`ror`.
-- [ ] **Width bridges:** `sign_extend BITS NEWWIDTH`, `zero_extend`, `truncate` — since
-      "8-bit support" really means moving cleanly between 4-, 8-, and 16-bit words.
-- [ ] Byte conveniences: confirm `int_to_bits N 8` round-trips through `bits_to_int`;
-      add an 8-bit demo block; consider named byte constants.
-- [ ] **Tests at 8 bits:** add/sub/carry/overflow vs `bits_to_int`, all `alu8` flags,
-      `sar` vs arithmetic division, sign-extension round-trips.
-- [ ] *(Doc)* a short sidebar (in `TUTORIAL_LAYER3.md` or the ALU notes): the same
-      chip scales from nibble to byte by widening the bit string.
+**Tasks — ✅ DONE (2026-05-23):**
+- [x] **`alu8`** — 8-bit ALU mirroring `alu4` (same op set, output `R0..R7 Z C N V`),
+      built on the new width-generic `word_add`/`word_sub`; every opcode and all four
+      flags tested (incl. 128+128 → Z,C,V).
+- [x] **Width-generic `word_add` / `word_sub`** over two LSB-first bit STRINGS of any
+      width (4/8/16-bit all tested); output = result bits + carry, two's-complement sub.
+      **Deviation from the original note:** `ripple_add4`/`ripple_add8` were *kept* as
+      their own explicit constructions (not made wrappers) — the docs/tutorial describe
+      `ripple_add8`'s "two chained nibbles," and the suite now cross-checks `word_add`
+      bit-for-bit *against* them (two constructions, proven equal — the project's
+      recurring theme, and a preview of TODO 4's third, fold-based construction).
+- [x] **`sar`** (arithmetic, sign-replicating right shift) + cyclic **`rol`/`ror`**.
+- [x] **Width bridges:** `zero_extend`, `sign_extend`, and `trunc_bits` (named
+      `trunc_bits`, *not* `truncate`, to avoid shadowing the coreutil of that name).
+- [x] Byte conveniences: `int_to_bits N 8` → `bits_to_int` round-trip tested; 8-bit
+      demos added to `README.md`/`OVERVIEW.md`. *(Named byte constants: skipped — the
+      "consider" was optional and nothing needed them.)*
+- [x] **Tests at 8 bits:** ~70 new checks — add/sub/carry/overflow, all `alu8` flags,
+      `sar` vs signed division, rotate identities, sign-extension round-trips.
+- [x] *(Doc)* `README.md` + `OVERVIEW.md` updated (function index, prose, coverage
+      table, examples). The plain-English `TUTORIAL_LAYER1.md` already makes the scaling
+      point ("same trick, eight columns"), so no jargon was forced into that voice.
 
 ---
 

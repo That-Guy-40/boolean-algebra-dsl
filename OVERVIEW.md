@@ -204,6 +204,22 @@ ripple_add8 $(dec_to_bits 200 8) $(dec_to_bits 100 8)   # 200 + 100 (= 300)
 The overflow case (carry-out = 1 with all sum bits 0) correctly signals that
 the result does not fit in 4 bits.
 
+### `word_add` / `word_sub` — the width-generic ripple add / subtract
+
+`ripple_add4`/`ripple_add8` are pinned to a width by their positional arguments.
+`word_add` is the same ripple-carry adder taking two **bit strings** of any width
+instead — so 8-, 16-, or n-bit addition needs no positional explosion. Its output
+keeps the `ripple_*` convention (the W result bits, then the carry-out), and the
+test suite cross-checks it bit-for-bit against `ripple_add4`/`ripple_add8`.
+`word_sub` is its two's-complement counterpart (`A + (~B) + 1`).
+
+```bash
+word_add "1 1 0 0" "1 0 1 0"                                # 3 + 5 (4-bit) -> 0 0 0 1 0
+word_add "$(dec_to_bits 200 8)"  "$(dec_to_bits 100 8)"     # 200 + 100 (8-bit) -> decodes to 300
+word_add "$(dec_to_bits 1000 16)" "$(dec_to_bits 1000 16)"  # same fn, 16-bit -> 2000
+word_sub "$(dec_to_bits 100 8)"  "$(dec_to_bits 50 8)"      # 100 - 50 -> 50  (Cout=1: no borrow)
+```
+
 ### `ripple_sub4` / `ripple_sub8` — two's-complement subtractors
 
 Subtraction reuses the adders: `A − B = A + (~B) + 1`. The helper `flip_bit`
@@ -266,7 +282,9 @@ which is exactly how a hardware min/max unit is wired.
 ## Layer 1 — Shifts and the ALU (capstone)
 
 `shl` / `shr` are width-preserving logical shifts (multiply / divide by 2ⁿ,
-dropping bits that fall off the end). They, the adders, the subtractor, the
+dropping bits that fall off the end); `sar` is the arithmetic right shift
+(sign-replicating, so it divides a signed value), and `rol` / `ror` rotate cyclically.
+They, the adders, the subtractor, the
 word-level bitwise ops, the comparator, and `is_zero` all come together in a
 4-bit **arithmetic-logic unit** — the piece that shows the whole bottom layer is
 a working processor data path, not just isolated gates.
@@ -301,6 +319,17 @@ alu4 add 0 0 0 1  0 0 0 1     # 8 + 8 -> 0 0 0 0 1 1 0 1   (wraps to 0: Z, C, V 
 
 This is the headline cross-circuit demo: a single call routes operands through
 whichever gate network the opcode selects and reports processor-style flags.
+
+`alu8` is the byte-width sibling: the identical op set and Z/C/N/V flags over
+8-bit words, built on the width-generic `word_add`/`word_sub`. The width bridges
+`zero_extend` (unsigned), `sign_extend` (preserves the signed value), and
+`trunc_bits` move a word between 4-, 8-, and 16-bit.
+
+```bash
+alu8 add $(dec_to_bits 100 8) $(dec_to_bits 50 8)   # 150 -> "... 0 0 1 1"  (N,V set: >127)
+alu8 add $(dec_to_bits 128 8) $(dec_to_bits 128 8)  # 256 wraps to 0 -> Z, C, V all set
+sign_extend "$(dec_to_bits 12 4)" 8                 # -4 (4-bit) -> 0 0 1 1 1 1 1 1  (still -4)
+```
 
 ---
 
@@ -559,7 +588,7 @@ Run with:
 
 ```bash
 bash test-boolean-funcs.sh
-# 952 passed, 0 failed
+# 1022 passed, 0 failed
 ```
 
 Coverage summary:
@@ -574,9 +603,9 @@ Coverage summary:
 | Complement & any reducers | `nand_all`/`nor_all`/`xnor_all` as exact negations of their bases (over all 4-bit words); `nor_all` = `is_zero`; `all`/`any`/`none` aliases; two-word `and_any`/`or_any`/`xor_any` cross-checked vs `bits_eq` and `is_zero` |
 | Mux, min & max | `mux` truth table and `word_mux` selection; `bits_min`/`bits_max` over a full grid vs shell min/max, with `min+max = a+b` and commutativity checks |
 | Word helpers & predicates | `inc`/`dec`/`negate` wrap and inverses (`a + (−a) = 0`); `is_one`/`is_even`/`is_odd`/`is_negative` exhaustively; `parity = popcount mod 2`, `lsb`/`msb`, `bits_to_int` decode over all 4-bit values |
-| Shifts & ALU | `shl`/`shr` width-preserving shifts; `alu4` over every opcode plus Z/C/N/V flag cases (signed overflow on 3+5, no-borrow carry on 5−3, zero+carry+overflow on 8+8) and unknown-opcode rejection |
+| Shifts & ALU | `shl`/`shr` logical shifts, arithmetic `sar` (vs signed division), cyclic `rol`/`ror`; `alu4` **and `alu8`** over every opcode plus Z/C/N/V flag cases (signed overflow on 3+5, no-borrow carry on 5−3, zero+carry+overflow on 8+8 and 128+128) and unknown-opcode rejection |
 | Adders | All 4 `half_adder` combinations with `true`/`false` strings; all 4 with `0`/`1` bit digits; 4 mixed inputs; all 8 `full_adder` combinations; `full_adder` string inputs |
-| Multi-bit adders | `ripple_add4` exact bit patterns + decoded sums over 30 input pairs + carry-in; `ripple_add8` low→high nibble carry propagation, 8-bit overflow, carry-in |
+| Multi-bit adders | `ripple_add4` exact bit patterns + decoded sums over 30 input pairs + carry-in; `ripple_add8` low→high nibble carry propagation, 8-bit overflow, carry-in; width-generic `word_add`/`word_sub` cross-checked bit-for-bit against the `ripple_*` circuits and run at 8- and 16-bit; `zero_extend`/`sign_extend`/`trunc_bits` width bridges (value-preservation + round-trips) |
 | Subtractors | `flip_bit` truth table; `ripple_sub4` / `ripple_sub8` signed two's-complement results (positive and negative) and borrow-flag (carry-out) semantics |
 | Comparators | `bit_to_bool`; `bits_eq` / `bits_gt` predicate exit codes; `compare4` over the full 8×8 grid and `compare8` over a 6×6 grid vs shell `-lt`/`-gt`; cascaded-priority edge cases (8 vs 7) |
 | EML | Base constructions; the `eml(x,y)` operator pinned directly to `bc`'s `e(x)−ln(y)`; exp/ln mutual inverses; all five arithmetic ops; mul/div round-trips; **every op (`+`,`−`,`×`,`÷`,`neg`,`exp`,`ln`) pinned against plain `bc` arithmetic** — independent proof the `exp(x)−ln(y)` construction rebuilds ordinary math. (The suite's `e` constant is `bc`'s `e(1)`, not `eml_e`, so the "= e" checks aren't circular.) |
@@ -610,16 +639,17 @@ parity  popcount  lsb  msb
 
 # Adders, subtractors & comparators (LSB-first bit strings)
 half_adder  full_adder
-ripple_add4  ripple_add8
+ripple_add4  ripple_add8       word_add  word_sub   # word_add/sub: width-generic
 flip_bit  ripple_sub4  ripple_sub8
 bit_to_bool  bits_eq  bits_gt  compare4  compare8
-int_to_bits
+int_to_bits  zero_extend  sign_extend  trunc_bits
 
 # Multiplexer, min & max
 mux  word_mux  bits_min  bits_max
 
 # Shifts & ALU
-shl  shr  alu4
+shl  shr  sar  rol  ror
+alu4  alu8
 
 # List accessors
 lhead  ltail  first  second

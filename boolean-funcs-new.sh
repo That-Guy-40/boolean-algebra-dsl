@@ -388,6 +388,40 @@ ripple_sub8 ()
               "${fb[4]}" "${fb[5]}" "${fb[6]}" "${fb[7]}" 1
 }
 
+# WIDTH-GENERIC RIPPLE ADD / SUBTRACT
+# The same ripple-carry idea as ripple_add4/ripple_add8, but taking two LSB-first
+# bit STRINGS of any width instead of fixed positional bits — so an 8-, 16-, or
+# n-bit add needs no 17-argument call. Width = max(|A|,|B|); a missing high bit on
+# the shorter operand reads as 0. Output matches the ripple_* convention exactly:
+# the W result bits, then the carry-out. (ripple_add4/8 are kept as their own
+# explicit constructions; the test suite cross-checks word_add against them.)
+
+word_add ()
+{
+  # word_add "A0 A1 .." "B0 B1 .." [Cin]   ->   "S0 S1 .. S{w-1} Cout"
+  # Threads each full_adder's carry-out into the next stage's carry-in, LSB→MSB.
+  local -a A B
+  read -ra A <<< "$1"
+  read -ra B <<< "$2"
+  local carry="${3:-0}" w=${#A[@]} out="" i r
+  [ "${#B[@]}" -gt "$w" ] && w=${#B[@]}
+  for ((i=0; i<w; i++)); do
+    r=$(full_adder "${A[i]:-0}" "${B[i]:-0}" "$carry")
+    out+="$(first "$r") "
+    carry=$(second "$r")
+  done
+  echo "${out}${carry}"
+}
+
+word_sub ()
+{
+  # word_sub "A0 A1 .." "B0 B1 .."   ->   "D0 D1 .. D{w-1} Cout"   (D = A - B)
+  # Two's complement: A - B = A + (~B) + 1. Cout=1 means no borrow (A >= B);
+  # Cout=0 means borrow (A < B), and D is the two's complement of (B - A) — the
+  # same convention as ripple_sub4/ripple_sub8. Operands should share a width.
+  word_add "$1" "$(word_not "$2")" 1
+}
+
 # ripple-carry testing (LSB first):
 #ripple_add4 1 1 0 0  1 0 1 0      # 3 + 5  -> 0 0 0 1 0   (= 8)
 #ripple_add4 1 1 1 1  1 0 0 0      # 15 + 1 -> 0 0 0 0 1   (= 16, carry-out set)
@@ -781,6 +815,85 @@ shr ()
   echo "${out% }"
 }
 
+sar ()
+{
+  # Arithmetic shift right by n (default 1), width-preserving. Like shr, but the
+  # vacated high bits are filled with copies of the SIGN bit (the MSB) instead of
+  # 0 — so it divides a two's-complement value by 2ⁿ (flooring toward −∞).
+  local -a A; read -ra A <<< "$1"
+  local n="${2:-1}" w=${#A[@]} out="" i src sign
+  sign="${A[w-1]:-0}"
+  for ((i=0; i<w; i++)); do
+    src=$((i + n))
+    if [ "$src" -lt "$w" ]; then out+="${A[src]} "; else out+="$sign "; fi
+  done
+  echo "${out% }"
+}
+
+rol ()
+{
+  # Rotate left by n (default 1): cyclic, width-preserving. Bits shifted off the
+  # top (MSB end) re-enter at the bottom (LSB end), so nothing is lost.
+  local -a A; read -ra A <<< "$1"
+  local n="${2:-1}" w=${#A[@]} out="" i src
+  [ "$w" -eq 0 ] && { echo ""; return; }
+  n=$(( n % w ))
+  for ((i=0; i<w; i++)); do src=$(( (i - n + w) % w )); out+="${A[src]} "; done
+  echo "${out% }"
+}
+
+ror ()
+{
+  # Rotate right by n (default 1): cyclic, width-preserving — the mirror of rol.
+  local -a A; read -ra A <<< "$1"
+  local n="${2:-1}" w=${#A[@]} out="" i src
+  [ "$w" -eq 0 ] && { echo ""; return; }
+  n=$(( n % w ))
+  for ((i=0; i<w; i++)); do src=$(( (i + n) % w )); out+="${A[src]} "; done
+  echo "${out% }"
+}
+
+# WIDTH BRIDGES
+# Move an LSB-first word between widths. zero_extend pads new high bits with 0
+# (unsigned widening); sign_extend replicates the sign bit (signed widening, so
+# the two's-complement value is preserved); trunc_bits keeps the low N bits.
+# These are how a value steps cleanly between 4-, 8-, and 16-bit words.
+
+zero_extend ()
+{
+  # zero_extend "B0 B1 .." NEWWIDTH  ->  resize to NEWWIDTH bits, padding any new
+  # high bits with 0. Correct for UNSIGNED values. (Narrows if NEWWIDTH < width.)
+  local -a A; read -ra A <<< "$1"
+  local nw="$2" w=${#A[@]} out="" i
+  for ((i=0; i<nw; i++)); do
+    if [ "$i" -lt "$w" ]; then out+="${A[i]} "; else out+="0 "; fi
+  done
+  echo "${out% }"
+}
+
+sign_extend ()
+{
+  # sign_extend "B0 B1 .." NEWWIDTH  ->  widen to NEWWIDTH bits, replicating the
+  # sign bit (MSB) into the new high bits. Preserves the two's-complement VALUE.
+  local -a A; read -ra A <<< "$1"
+  local nw="$2" w=${#A[@]} out="" i sign
+  sign="${A[w-1]:-0}"
+  for ((i=0; i<nw; i++)); do
+    if [ "$i" -lt "$w" ]; then out+="${A[i]} "; else out+="$sign "; fi
+  done
+  echo "${out% }"
+}
+
+trunc_bits ()
+{
+  # trunc_bits "B0 B1 .." NEWWIDTH  ->  keep the low NEWWIDTH bits, drop the rest.
+  # (Named trunc_bits, not "truncate", to avoid shadowing the coreutil of that name.)
+  local -a A; read -ra A <<< "$1"
+  local nw="$2" w=${#A[@]} out="" i
+  for ((i=0; i<nw && i<w; i++)); do out+="${A[i]} "; done
+  echo "${out% }"
+}
+
 alu4 ()
 {
   # 4-bit ALU.  alu4 OP  A0 A1 A2 A3  B0 B1 B2 B3   (LSB-first)
@@ -812,6 +925,43 @@ alu4 ()
   case "$op" in
     add) [ "$a3" = "$b3" ]  && [ "${R[3]}" != "$a3" ] && v=1 ;;
     sub) [ "$a3" != "$b3" ] && [ "${R[3]}" != "$a3" ] && v=1 ;;
+  esac
+  echo "$result $z $c $n $v"
+}
+
+alu8 ()
+{
+  # 8-bit ALU — the byte-width sibling of alu4, with the identical op set and flag
+  # semantics.  alu8 OP  A0..A7  B0..B7   (LSB-first)
+  #   OP ∈ add sub and or xor not slt shl shr
+  # Output:  "R0..R7 Z C N V"  — 8 result bits then four status flags:
+  #   Z zero, C carry-out (add/sub) or shifted-out bit, N negative (result MSB),
+  #   V signed overflow (add/sub). Add/sub use the width-generic word_add/word_sub;
+  #   the bitwise ops, comparator and shifters are already width-generic.
+  local op="$1"; shift
+  local A="$1 $2 $3 $4 $5 $6 $7 $8"
+  local B="$9 ${10} ${11} ${12} ${13} ${14} ${15} ${16}"
+  local a7="$8" b7="${16}"
+  local result c=0 r
+  case "$op" in
+    add) r=$(word_add "$A" "$B"); result="${r% *}"; c="${r##* }" ;;
+    sub) r=$(word_sub "$A" "$B"); result="${r% *}"; c="${r##* }" ;;  # C=1 means no borrow
+    and) result=$(word_and "$A" "$B") ;;
+    or)  result=$(word_or  "$A" "$B") ;;
+    xor) result=$(word_xor "$A" "$B") ;;
+    not) result=$(word_not "$A") ;;                                  # unary; B ignored
+    slt) if bits_gt "$B" "$A" >/dev/null; then result="1 0 0 0 0 0 0 0"; else result="0 0 0 0 0 0 0 0"; fi ;;
+    shl) result=$(shl "$A" 1); c="$8" ;;                             # C = bit shifted out (MSB)
+    shr) result=$(shr "$A" 1); c="$1" ;;                             # C = bit shifted out (LSB)
+    *)   echo "alu8: unknown op '$op'" >&2; return 2 ;;
+  esac
+  local -a R; read -ra R <<< "$result"
+  local n="${R[7]}" z v=0
+  if is_zero "$result" >/dev/null; then z=1; else z=0; fi
+  # Signed overflow, same rule as alu4 but on the 8-bit sign bit (bit 7).
+  case "$op" in
+    add) [ "$a7" = "$b7" ]  && [ "${R[7]}" != "$a7" ] && v=1 ;;
+    sub) [ "$a7" != "$b7" ] && [ "${R[7]}" != "$a7" ] && v=1 ;;
   esac
   echo "$result $z $c $n $v"
 }

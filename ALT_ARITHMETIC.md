@@ -20,7 +20,7 @@ bash test-alt-arithmetic.sh  # 142 passed, 0 failed  (~10s — see "speed" below
 > often ripples through the gate layer. They are deliberately, gloriously slow;
 > that slowness is the point, because it makes the foundations visible. For fast
 > integer math use Layer 1 (`ripple_add4`, `alu4`); for real numbers, Layers 2–3.
-> The models live in their own file and test suite so the fast 952-test core
+> The models live in their own file and test suite so the fast 1022-test core
 > stays pristine.
 
 ---
