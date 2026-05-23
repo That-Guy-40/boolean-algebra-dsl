@@ -169,6 +169,20 @@ for tc in "5 3" "7 2" "3 3" "2 5" "6 0" "9 4"; do
     check_str "sub $1 $2 (monus)" "$(( $1-$2 < 0 ? 0 : $1-$2 ))" "$(cn "$(church_sub "$(ci $1)" "$(ci $2)")")"
 done
 
+section "Church ordering & division (leq / lt / eq / div) — complete ordered arithmetic"
+# kept to small operands: these recurse through pred/sub and are slow
+for tc in "2 5" "5 2" "3 3" "0 0" "4 0"; do
+    set -- $tc
+    check_str "leq $1 $2" "$([ $1 -le $2 ] && echo true || echo false)" "$(church_leq "$(ci $1)" "$(ci $2)")"
+    check_str "lt  $1 $2" "$([ $1 -lt $2 ] && echo true || echo false)" "$(church_lt  "$(ci $1)" "$(ci $2)")"
+    check_str "eq  $1 $2" "$([ $1 -eq $2 ] && echo true || echo false)" "$(church_eq  "$(ci $1)" "$(ci $2)")"
+done
+check_str "div 6 2 = 3"  "3" "$(cn "$(church_div "$(ci 6)" "$(ci 2)")")"
+check_str "div 7 3 = 2"  "2" "$(cn "$(church_div "$(ci 7)" "$(ci 3)")")"
+check_str "div 5 2 = 2"  "2" "$(cn "$(church_div "$(ci 5)" "$(ci 2)")")"
+check_str "div 4 4 = 1"  "1" "$(cn "$(church_div "$(ci 4)" "$(ci 4)")")"
+check_str "div 1 3 = 0"  "0" "$(cn "$(church_div "$(ci 1)" "$(ci 3)")")"
+
 section "Church higher-order: the SAME numeral iterates any function"
 # Numeral 5 applied to a star-appender (a non-arithmetic fn value) → '*****'.
 STAR='printf "%s*" "$1"'

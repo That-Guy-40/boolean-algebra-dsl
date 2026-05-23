@@ -13,7 +13,7 @@ Boolean layer so you can watch foundations touch hardware.
 
 ```bash
 source ./alt-arithmetic.sh   # pulls in boolean-funcs-new.sh automatically
-bash test-alt-arithmetic.sh  # 122 passed, 0 failed  (~10s — see "speed" below)
+bash test-alt-arithmetic.sh  # 142 passed, 0 failed  (~10s — see "speed" below)
 ```
 
 > **A note on speed.** These models do arithmetic by *counting* — and the count
@@ -157,12 +157,23 @@ church_to_int "$(church_sub  "$(int_to_church 7)" "$(int_to_church 3)")"    # 4
 church_to_int "$(church_sub  "$(int_to_church 2)" "$(int_to_church 5)")"    # 0  (monus)
 ```
 
+And once `pred`/`sub`/`is_zero` exist, **ordering and division are free** — making
+this a *complete ordered arithmetic*. Since truncated subtraction floors at 0,
+`m − n = 0` exactly when `m ≤ n`:
+
+```bash
+church_leq "$(int_to_church 2)" "$(int_to_church 5)"   # true   (is_zero (sub m n))
+church_lt  "$(int_to_church 5)" "$(int_to_church 2)"   # false  (m + 1 ≤ n)
+church_eq  "$(int_to_church 4)" "$(int_to_church 4)"   # true   (m ≤ n ∧ n ≤ m)
+church_to_int "$(church_div "$(int_to_church 13)" "$(int_to_church 4)")"   # 3  (repeated subtraction)
+```
+
 Combinator layer: `FN_ID` `apply` `apply2` `lift` `compose` `as_fn`/`as_fn2`;
 list toolkit `lnull` `lhead` `ltail` `llength` `map` `mapcar` `filter` `foldl`
 `foldr` `foldl1` `scanl` `zipwith` `zip` `unzip` `flatten` `take`/`drop`
 `take_while`/`drop_while` `take_until`/`drop_until` `lrange` `lreverse` `iterate`
 `any`/`all`. Church: `church_iter` `church_zero/one/succ` `church_plus/mult/pow`
-`church_pred/sub` `church_is_zero`; booleans `CHURCH_TRUE/FALSE` `church_if`
+`church_pred/sub` `church_leq/lt/eq/div` `church_is_zero`; booleans `CHURCH_TRUE/FALSE` `church_if`
 `church_band/bor/bnot` `church_to_bool`; pairs `cons/car/cdr`; bridges
 `int_to_church` / `church_to_int` / `church_to_bits`. (Numerals and booleans are
 fn-value strings — read them with `church_to_int` / `church_to_bool`.)

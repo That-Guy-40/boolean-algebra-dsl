@@ -225,6 +225,20 @@ church_sub () { local m="$1" n="$2"; apply "$(apply "$n" "$__PRED")" "$m"; }
 __const_false='printf false'
 church_is_zero () { apply "$(apply "$1" "$__const_false")" true; }
 
+# ── Ordering & division: once you have pred/sub/is-zero, comparison is free.
+# Truncated subtraction floors at 0, so m − n = 0 exactly when m ≤ n. These echo
+# the strings "true"/"false" (like church_is_zero and the Layer-1 predicates). ──
+church_leq () { church_is_zero "$(church_sub "$1" "$2")"; }                 # m ≤ n  ⟺  m − n = 0
+church_lt  () { church_leq "$(church_succ "$1")" "$2"; }                    # m < n  ⟺  m + 1 ≤ n
+church_eq  () {                                                            # m = n  ⟺  m ≤ n ∧ n ≤ m
+  if [ "$(church_leq "$1" "$2")" = true ] && [ "$(church_leq "$2" "$1")" = true ]
+  then echo true; else echo false; fi
+}
+church_div () {                                                            # ⌊m / n⌋ by repeated subtraction (n > 0)
+  if [ "$(church_lt "$1" "$2")" = true ]; then church_zero
+  else church_succ "$(church_div "$(church_sub "$1" "$2")" "$2")"; fi
+}
+
 # ── bridges ──────────────────────────────────────────────────────────────────
 __intsucc='echo $(( $1 + 1 ))'
 church_to_int  () { apply "$(apply "$1" "$__intsucc")" 0; }     # numeral applied to (+1) then 0
