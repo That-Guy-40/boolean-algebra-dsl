@@ -669,7 +669,7 @@ bash tests/test-boolean-funcs.sh
 ```
 
 The core suite above is the fast, pristine heart. The computation layers each carry
-their own suite (all green): `test-list-processing-kit.sh` (77), `test-alt-arithmetic.sh`
+their own suite (all green): `test-list-processing-kit.sh` (95), `test-alt-arithmetic.sh`
 (142), `test-combinator-circuits.sh` (111), `test-lambda.sh` (67),
 `test-state-machine.sh` (37), `test-turing-machine.sh` (40), the capstone
 `test-church-turing.sh` (46), the Layer-1 viewer `test-circuit-trace.sh` (1118), the

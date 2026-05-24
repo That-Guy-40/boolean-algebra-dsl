@@ -25,6 +25,7 @@
 #   complement / conj / disj p [q]          combine predicates into new predicates
 #   replicate n x / intercalate sep xs      builders
 #   zipwith3 f xs ys zs                     element-wise combine of three lists
+#   box_diagram xs                          draw the list in SICP box-and-pointer ASCII
 #
 # SELF-CONTAINED: the kit bundles the application combinators it relies on
 # (`apply`, `apply2`, `apply3`) so it works when sourced on its own — no other file
@@ -217,4 +218,64 @@ zipwith3 () {                             # element-wise combine THREE lists wit
   local n=${#A[@]}; [ ${#B[@]} -lt "$n" ] && n=${#B[@]}; [ ${#C[@]} -lt "$n" ] && n=${#C[@]}
   for ((i=0; i<n; i++)); do res+=" $(apply3 "$cf" "${A[i]}" "${B[i]}" "${C[i]}")"; done
   echo "${res# }"
+}
+
+# ── Box-and-pointer diagrams (the SICP §2.2 picture, in ASCII) ─────────────────
+# Draw a list the way the Lisp/Scheme texts do: a horizontal spine of cons cells,
+# each car (left box) pointing DOWN to its datum and each cdr (right box) pointing
+# RIGHT to the next cell, the final cdr a slash (/) — the empty list. A ':'-tuple (a
+# `zip` result) is itself a pair, so it is drawn as a NESTED sub-cell: `zip` output
+# then shows as a list OF pairs, exactly the textbook nested diagram. ASCII art, so
+# the columns line up in any locale. Self-contained — uses nothing outside the kit.
+_box_pad () { local s="$1" w="$2"; while [ "${#s}" -lt "$w" ]; do s+=' '; done; printf '%s' "$s"; }
+
+box_diagram () {                          # box_diagram "x1 x2 …"  -> an ASCII box-and-pointer diagram
+  local -a atoms; read -ra atoms <<< "$1"
+  local n=${#atoms[@]}
+  [ "$n" -eq 0 ] && { printf '  /   (the empty list)\n'; return 0; }
+
+  local -a blob=() wid=()                 # per-column: newline-joined lines, and width
+  local H=0 i
+  for ((i=0; i<n; i++)); do
+    local atom="${atoms[i]}" last=0; [ "$i" -eq $((n-1)) ] && last=1
+    local colons="${atom//[^:]/}"         # a single ':' marks a pair (a zip tuple)
+
+    # datum block, anchored under the car (col 2): a plain atom, or a nested pair cell
+    local -a dat=()
+    if [ "$colons" = ":" ]; then
+      local px="${atom%%:*}" py="${atom#*:}" pl
+      pl=$(_box_pad "    $px" 8)"$py"      # x under col 4, y under col 8
+      dat=( "  +---+---+" "  | * | * |" "  +-+-+-+-+" "    |   |" "$pl" )
+    else
+      dat=( "  $atom" )
+    fi
+
+    # the cons cell (spine) + car-pointer, then the datum
+    local mid="| * | *-+"; [ "$last" = 1 ] && mid="| * | / |"
+    local -a lines=( "+---+---+" "$mid" "+-+-+---+" "  |" "  v" "${dat[@]}" )
+
+    # column width = widest line (≥ 11 for a non-last cell, to fit the cdr arrow)
+    local w=9 L; for L in "${lines[@]}"; do [ "${#L}" -gt "$w" ] && w="${#L}"; done
+    [ "$last" = 0 ] && [ "$w" -lt 11 ] && w=11
+    if [ "$last" = 0 ]; then               # stretch the cdr arrow to the next cell
+      local arrow="" k; for ((k=9; k<w-1; k++)); do arrow+='-'; done
+      lines[1]="| * | *-+$arrow>"
+    fi
+
+    local -a padded=(); for L in "${lines[@]}"; do padded+=( "$(_box_pad "$L" "$w")" ); done
+    local joined; joined=$(IFS=$'\n'; printf '%s' "${padded[*]}")
+    blob[i]="$joined"; wid[i]="$w"
+    [ "${#padded[@]}" -gt "$H" ] && H=${#padded[@]}
+  done
+
+  # merge the columns left-to-right, top-aligned (shorter columns pad with blanks)
+  local r
+  for ((r=0; r<H; r++)); do
+    local row=""
+    for ((i=0; i<n; i++)); do
+      local -a cl; mapfile -t cl <<< "${blob[i]}"
+      if [ -n "${cl[r]+x}" ]; then row+="${cl[r]}"; else row+="$(_box_pad '' "${wid[i]}")"; fi
+    done
+    printf '%s\n' "$row"
+  done
 }

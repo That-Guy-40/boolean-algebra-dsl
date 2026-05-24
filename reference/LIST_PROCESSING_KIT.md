@@ -161,10 +161,52 @@ of the project: `combinator-circuits.sh` rebuilds Layer-1's word ops from it
 transition over the input. The design rule that makes all that possible: the kit stays
 **domain-neutral** — it never reaches into a lower layer.
 
+## Box-and-pointer diagrams
+
+`box_diagram xs` draws a list the way the Lisp/Scheme texts do (SICP
+[§2.2](https://sarabander.github.io/sicp/html/2_002e2.xhtml)): a horizontal spine of
+**cons cells**, each *car* (left box) pointing **down** to its datum and each *cdr*
+(right box) pointing **right** to the next cell, the final cdr a slash `/` — the empty
+list. ASCII art, so the columns line up anywhere; self-contained, like the rest of the
+kit.
+
+```bash
+box_diagram "3 1 4 1"
+```
+```
++---+---+  +---+---+  +---+---+  +---+---+
+| * | *-+->| * | *-+->| * | *-+->| * | / |
++-+-+---+  +-+-+---+  +-+-+---+  +-+-+---+
+  |          |          |          |
+  v          v          v          v
+  3          1          4          1
+```
+
+A `:`-tuple is itself a pair, so a `zip` result is drawn as a **list of pairs** — each
+spine car points down to a nested sub-cell (the textbook nested diagram):
+
+```bash
+box_diagram "$(zip 'a b c' '1 2 3')"     # a:1 b:2 c:3
+```
+```
++---+---+  +---+---+  +---+---+
+| * | *-+->| * | *-+->| * | / |
++-+-+---+  +-+-+---+  +-+-+---+
+  |          |          |
+  v          v          v
+  +---+---+  +---+---+  +---+---+
+  | * | * |  | * | * |  | * | * |
+  +-+-+-+-+  +-+-+-+-+  +-+-+-+-+
+    |   |      |   |      |   |
+    a   1      b   2      c   3
+```
+
+The empty list prints as the lone slash (`box_diagram ''` → `/   (the empty list)`).
+
 ## Tests
 
 ```bash
-bash tests/test-list-processing-kit.sh    # 77 passed, 0 failed
+bash tests/test-list-processing-kit.sh    # 95 passed, 0 failed
 ```
 
 The suite sources **only** the kit — no Layer-1 gates, no arithmetic models — which is

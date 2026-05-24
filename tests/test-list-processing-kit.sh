@@ -132,5 +132,36 @@ check_str "take_until == take_while∘complement" \
 check_str "conj even∧<4" "false true false false false false" "$(map "$(conj "$EVEN" "$LT4")" '1 2 3 4 5 6')"
 check_str "disj even∨<4" "true true true true false true"     "$(map "$(disj "$EVEN" "$LT4")" '1 2 3 4 5 6')"
 
+# ── box_diagram: structural invariants pinned to the list it draws ────────────
+# A diagram can't be wrong about the list if it has exactly one cons cell per atom
+# (n−1 cdr arrows + 1 nil slash) and shows every datum. We assert that against the
+# real llength, for a flat list and for a zip'd list of pairs.
+section "box_diagram — structure matches the list"
+nsub () { printf '%s' "$1" | grep -oF -- "$2" | wc -l | tr -d ' '; }   # count occurrences of a literal
+
+# the box art uses only + - | * / v and spaces (no digits/letters), so a datum is
+# "drawn" iff it appears as a whitespace-delimited token anywhere in the diagram.
+drawn () { printf '%s' "$1" | grep -qE "(^| )$2( |\$)" && echo yes; }
+
+flat="3 1 4 1 5"; dia="$(box_diagram "$flat")"
+check_str "flat: n−1 cdr arrows"  "$(( $(llength "$flat") - 1 ))" "$(nsub "$dia" '->')"
+check_str "flat: exactly one nil" "1"                              "$(nsub "$dia" '/')"
+for a in 3 1 4 5; do
+  check_str "flat: datum $a drawn" "yes" "$(drawn "$dia" "$a")"
+done
+
+pairs="$(zip 'a b c' '1 2 3')"; pdia="$(box_diagram "$pairs")"
+check_str "pairs: n−1 cdr arrows"     "2"  "$(nsub "$pdia" '->')"
+check_str "pairs: one nil"            "1"  "$(nsub "$pdia" '/')"
+check_str "pairs: 3 nested sub-cells" "3"  "$(nsub "$pdia" '| * | * |')"
+for kv in a:1 b:2 c:3; do
+  check_str "pairs: ${kv%%:*} drawn" "yes" "$(drawn "$pdia" "${kv%%:*}")"
+  check_str "pairs: ${kv#*:} drawn"  "yes" "$(drawn "$pdia" "${kv#*:}")"
+done
+
+check_str "empty list message"  "yes" "$(box_diagram '' | grep -q 'empty list' && echo yes)"
+check_str "singleton: no arrows" "0"   "$(nsub "$(box_diagram 42)" '->')"
+check_str "singleton: drawn"     "yes" "$(drawn "$(box_diagram 42)" 42)"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
