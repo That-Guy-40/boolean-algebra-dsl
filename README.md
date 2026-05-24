@@ -315,6 +315,24 @@ lc_trace "$(lc_church 1) f x"         # SUCC ZERO f x  →  …  →  f x
 
 `test-lambda.sh` (45 passing) checks both views agree, and that the SKI numerals match `int_to_church`.
 
+## A machine layer — the other side of Church–Turing
+
+If `lambda.sh` is the **function** side, `state-machine.sh` and `turing-machine.sh` (see [`MACHINES.md`](MACHINES.md)) are the **machine** side: a finite state machine — where *running it is a left fold of the transition over the input* — and then a Turing machine, that same control plus a bounded read/write tape.
+
+```bash
+source ./turing-machine.sh        # sources state-machine.sh (the FSM) too
+
+fsm_run "$FSM_PARITY" e '1 1 0 1'                 # o   (odd number of 1s; an FSM run = a foldl)
+
+# a Turing machine that increments a binary number, LSB-first…
+tm_run "$TM_BINARY_INC" h c '1 1 0 0'             # 0 0 1 0   (3 -> 4)
+inc "1 1 0 0"                                     # 0 0 1 0   (…the SAME function as Layer 1's gate-built inc)
+
+TM_BLANK=0; tm_steps "$TM_BB3" H A '' 100 $((TM_TAPE/2))   # 14   (a busy beaver: six 1s, then it halts)
+```
+
+The wire-backs are the point: the binary-increment TM equals `inc`, the bit-flip TM equals `word_not`, the parity FSM equals `xor_all`, and an FSM *is* a TM that only moves right and never writes. `test-state-machine.sh` (37) and `test-turing-machine.sh` (40) check it all.
+
 ## Tests
 
 ```bash
@@ -324,7 +342,7 @@ bash test-boolean-funcs.sh
 
 Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions (incl. complement reductions `nand_all`/`nor_all`/`xnor_all` as exact negations, `all`/`any`/`none` aliases, and two-word `and_any`/`or_any`/`xor_any` cross-checked against `bits_eq` and `is_zero`), the `mux`/`word_mux` selector and `bits_min`/`bits_max` over a full grid, word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts (plus arithmetic `sar` and cyclic `rol`/`ror`), the width-generic `word_add`/`word_sub` (cross-checked bit-for-bit against `ripple_add4`/`ripple_add8`/`ripple_sub4`, and run at 8- and 16-bit width), the `zero_extend`/`sign_extend`/`trunc_bits` width bridges, the `alu4` and `alu8` ALUs (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases. The numeric layers are pinned against **independent `bc` oracles**: the base `eml(x,y)` operator against `e(x)−ln(y)`, the EML ops (`+`, `−`, `×`, `÷`, `^`, `neg`, `exp`, `ln`) against plain `bc` arithmetic — proving the `exp(x)−ln(y)` construction rebuilds ordinary math — both `eml_recip` and `eml_recip_auto` against `bc`'s `1/x`, the inverse hyperbolics against their `ln`/`sqrt` closed forms, and the derived trig (`tan`/`cot`/`sec`/`csc`) against `bc`'s `s()`/`c()` ratios. The shared `e` constant in the suite is `bc`'s `e(1)`, not `eml_e`, so the EML "= e" checks never compare the layer to itself.
 
-The slower / standalone layers have their own suites: `test-list-processing-kit.sh` (77 — the combinator kit alone, no Layer 1), `test-alt-arithmetic.sh` (142 — Peano / Church / modular), `test-combinator-circuits.sh` (111 — the function-side `fp_*` rebuilds, each checked bit-for-bit against its Layer-1 twin), and `test-lambda.sh` (45 — SKI combinatory logic, cross-checked against the Church layer).
+The slower / standalone layers have their own suites: `test-list-processing-kit.sh` (77 — the combinator kit alone, no Layer 1), `test-alt-arithmetic.sh` (142 — Peano / Church / modular), `test-combinator-circuits.sh` (111 — the function-side `fp_*` rebuilds, each checked bit-for-bit against its Layer-1 twin), `test-lambda.sh` (45 — SKI combinatory logic, cross-checked against the Church layer), `test-state-machine.sh` (37 — FSM verdicts vs ground truth), and `test-turing-machine.sh` (40 — Turing machines, incl. binary-increment == `inc`).
 
 ## Attribution
 
@@ -390,6 +408,14 @@ SKI_I  SKI_K  SKI_S  SKI_B  SKI_C  SKI_W
 LAMBDA_TRUE  LAMBDA_FALSE  LAMBDA_ZERO  LAMBDA_SUCC
 lambda_church  lambda_church_to_int
 lc_step  lc_normalize  lc_trace  lc_church
+
+# Finite state machine (state-machine.sh)
+fsm_step  fsm_run  fsm_trace  fsm_accepts
+FSM_PARITY  FSM_DIV3  FSM_SEQ101  FSM_TURNSTILE
+
+# Turing machine (turing-machine.sh)
+tm_step  tm_run  tm_trace  tm_steps
+TM_UNARY_INC  TM_UNARY_ADD  TM_FLIP  TM_BINARY_INC  TM_PARITY  TM_BB2  TM_BB3
 
 # EML operator
 eml  eml_exp  eml_e  eml_ln  eml_zero

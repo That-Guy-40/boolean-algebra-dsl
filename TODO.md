@@ -30,33 +30,35 @@ exploration and learning, starting with ourselves.**
 > "FSM + tape." (An FSM is the restricted special case — it's a TM that can't write
 > and only moves one way.)
 
-**Suggested files:** `state-machine.sh` + `turing-machine.sh` (or one `machines.sh`),
-`test-machines.sh`, later `TUTORIAL_MACHINES.md`.
+**Files:** `state-machine.sh` + `turing-machine.sh`, each with its own test file
+(`test-state-machine.sh` / `test-turing-machine.sh`) — kept the per-file convention
+rather than one `test-machines.sh`. Plain-English `TUTORIAL_MACHINES.md` deferred.
 
-### 1a. Finite State Machine (`state-machine.sh`)
-- [ ] Generic FSM driver: a transition table `(state, symbol) → state`, a start
-      state, and a set of accept states; `fsm_run TABLE START INPUT` returns the
-      final state (and accept/reject).
-- [ ] **Lovely reuse:** *running an FSM is a left fold of the transition function
-      over the input list* — so implement it with the kit's `foldl` (input symbols
-      as a space-separated list, the transition as the binary combiner, the state
-      as the accumulator).
-- [ ] Example machines: parity detector (ties to `xor_all`), "divisible by 3" over
-      a binary string, a sequence detector (e.g. spot `1 0 1`), a turnstile.
-- [ ] Tests comparing FSM verdicts to a ground-truth check.
+### 1a. Finite State Machine (`state-machine.sh`) — ✅ DONE (2026-05-23)
+- [x] Generic FSM driver: a transition table (rules `state,symbol->nextstate`), start
+      state, accept states; `fsm_run` / `fsm_accepts`.
+- [x] **The lovely reuse:** `fsm_run` IS `foldl` of the transition over the input
+      (state = the accumulator); `fsm_trace` is the matching `scanl` (the state history).
+- [x] Example machines: `FSM_PARITY` (ties to `xor_all`), `FSM_DIV3` (divisible-by-3
+      over MSB-first binary), `FSM_SEQ101` (spot `1 0 1`), `FSM_TURNSTILE`.
+- [x] Tests vs ground truth — popcount, value mod 3, substring search, and the
+      `xor_all` tie (`test-state-machine.sh`, 37 passing).
 
-### 1b. Turing Machine (`turing-machine.sh`)
-- [ ] Finite-state control (reuse the FSM idea) + a **bounded tape** (a large fixed
-      width, e.g. `TM_TAPE=256` cells; document the bound and the blank symbol).
-- [ ] Represent the tape as a space-separated atom list (so the list kit applies)
-      or a bash array; track head index + current state.
-- [ ] Transition: `(state, symbol) → (new_state, write_symbol, move L|R)`;
-      `tm_step` + `tm_run` (run to a halt state, with a `max_steps` guard).
-- [ ] Example programs: unary increment, unary addition, binary increment, copy a
-      string, palindrome checker, a small busy-beaver.
-- [ ] **Wire to Layer 1:** let tape cells be bits; a TM that increments a binary
-      number can be checked against `inc` / `ripple_add4`.
-- [ ] Tests; keep them small (this will be slow).
+### 1b. Turing Machine (`turing-machine.sh`) — ✅ DONE (2026-05-23)
+- [x] FSM control + a **bounded tape** (`TM_TAPE=64` cells — ample and fast; blank
+      `TM_BLANK='_'`, both documented; the head running off either end halts).
+- [x] Tape as a space-separated cell list inside a config string `"state|head|tape"`;
+      `tm_step` is a **pure config → config function**.
+- [x] Transition `state,symbol->newstate,write,move` (move L|R|S); `tm_step` + `tm_run`
+      (+ `tm_trace` / `tm_steps`), with a `max_steps` guard.
+- [x] Example programs: unary increment, unary addition, bit-flip, binary increment,
+      parity-as-a-TM, and the BB-2 / BB-3 busy beavers. (Copy/palindrome skipped — the
+      list was illustrative; this set covers the ground plus the wire-backs.)
+- [x] **Wired to Layer 1:** the binary-increment TM == `inc`, and the bit-flip TM ==
+      `word_not` (cross-checked bit-for-bit) — the tape machine and the gate circuit
+      computing the same function. Plus **an FSM expressed as a TM** (`TM_PARITY`,
+      right-moving + non-writing) to make the theory anchor runnable.
+- [x] Tests (`test-turing-machine.sh`, 40 passing) — small and fast (~0.7s).
 
 ---
 
@@ -207,8 +209,10 @@ Layer-1 twin bit-for-bit; `test-list-processing-kit.sh` grew 50 → 77. Full wri
 
 ## The capstone — Church–Turing in action (`TUTORIAL_CHURCH_TURING.md`)
 
-Once TODO 1 and TODO 2 exist, land the punchline by computing the **same function
-two ways** and showing the answers agree:
+**Both prerequisites now exist** — TODO 1 (the machine layer: `state-machine.sh` +
+`turing-machine.sh`) and TODO 2 (the lambda layer: `lambda.sh`) are done. So **this is
+the next thing to build.** Land the punchline by computing the **same function two
+ways** and showing the answers agree:
 
 - [ ] Pick a function (e.g. "double", "add", or "is even").
 - [ ] Implement it as a **Turing machine** (TODO 1) and in the **lambda/Church**
