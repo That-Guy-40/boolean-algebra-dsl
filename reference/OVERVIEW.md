@@ -36,6 +36,8 @@ below it.
 
 ## Layer 1 — Boolean DSL
 
+*Focused reference: [`BOOLEAN_DSL.md`](BOOLEAN_DSL.md).*
+
 ### Value convention
 
 Shell functions return **exit codes**: `0` = success = **true**, `1` (or
@@ -337,6 +339,8 @@ sign_extend "$(dec_to_bits 12 4)" 8                 # -4 (4-bit) -> 0 0 1 1 1 1 
 
 ## Layer 2 — EML Operator
 
+*Focused reference: [`EML_OPERATOR.md`](EML_OPERATOR.md).*
+
 The EML operator was introduced by Odrzywołek (2026):
 
 ```
@@ -429,6 +433,8 @@ whole stack. (Domain `1 < x < 2^12`, the comparator width used.)
 ---
 
 ## Layer 3 — Bootstrapped Math Library
+
+*Focused reference: [`MATH_LIBRARY.md`](MATH_LIBRARY.md).*
 
 All functions wrap bc's six primitives (`s` sin, `c` cos, `a` atan, `l` ln,
 `e` exp, `sqrt`) using the formulas from John D. Cook's bootstrapping article.

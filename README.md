@@ -360,7 +360,8 @@ successor of 5  ->  6
 │                            list-processing-kit · combinator-circuits · lambda ·
 │                            state-machine · turing-machine · church-turing
 ├── tests/                 one suite per script   (run: bash tests/test-*.sh)
-├── reference/             function-by-function deep dives: OVERVIEW · ALT_ARITHMETIC ·
+├── reference/             function-by-function deep dives: OVERVIEW · BOOLEAN_DSL ·
+│                            EML_OPERATOR · MATH_LIBRARY · ALT_ARITHMETIC ·
 │                            COMBINATOR_CIRCUITS · LAMBDA · MACHINES
 ├── ETHOS.md               the project's ethos & guiding aim (why it's built this way)
 ├── TUTORIAL_*.md          the plain-English walkthroughs (Layers 1–7)
