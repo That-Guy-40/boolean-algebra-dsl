@@ -602,7 +602,7 @@ gates:
 | Alternative arithmetic | `alt-arithmetic.sh` | [`ALT_ARITHMETIC.md`](ALT_ARITHMETIC.md) | Peano, **Church numerals**, and modular arithmetic — three definitions of "number" |
 | Combinator toolkit | `list-processing-kit.sh` | [`LIST_PROCESSING_KIT.md`](LIST_PROCESSING_KIT.md) | a Scheme-style `map` / `fold` / `zipwith` toolkit over lists |
 | Combinator circuits | `combinator-circuits.sh` | [`COMBINATOR_CIRCUITS.md`](COMBINATOR_CIRCUITS.md) | Layer-1 word ops rebuilt from the function side (the adder as a `foldl`) |
-| Lambda calculus | `lambda.sh` | [`LAMBDA.md`](LAMBDA.md) | the **SKI** combinators; Church booleans / numerals built from S, K, I |
+| Lambda calculus | `lambda.sh` | [`LAMBDA.md`](LAMBDA.md), [`LAMBDA_TRACE.md`](LAMBDA_TRACE.md) | the **SKI** combinators (apply-able), plus the symbolic reducer that rewrites SKI terms step by step (`lc_trace` / `lc_show`) |
 | Machines | `state-machine.sh`, `turing-machine.sh` | [`MACHINES.md`](MACHINES.md) | a finite-state machine, then a bounded-tape **Turing machine** |
 | Circuit trace | `circuit-trace.sh` | [`CIRCUIT_TRACE.md`](CIRCUIT_TRACE.md) | a read-only **viewer** over Layer 1 — `add_trace`/`sub_trace`/`alu_trace` draw the carry ripple and decode the flags |
 | Alt-arithmetic trace | `alt-arithmetic-trace.sh` | [`ALT_ARITHMETIC_TRACE.md`](ALT_ARITHMETIC_TRACE.md) | a read-only **viewer** over Layer 4 — the Peano successor tower, the Church numeral iterating, the modular clock wrap |

@@ -324,7 +324,7 @@ fp_add_trace "1 0 1 0" "0 1 1 0"             # 5 + 6: the carry ripple AS a fold
 
 ## Lambda calculus — the function side
 
-`lambda.sh` (see [`reference/LAMBDA.md`](reference/LAMBDA.md) for the reference and [`TUTORIAL_LAYER6_LAMBDA.md`](TUTORIAL_LAYER6_LAMBDA.md) for a plain-English walkthrough) builds the **function side** of Church–Turing: the lambda calculus, via **combinatory logic** — the three combinators **S**, **K**, **I**, which sidestep variable-capture by having no variables at all. Two views, cross-checked against each other and against the Church numerals in `alt-arithmetic.sh`:
+`lambda.sh` (see [`reference/LAMBDA.md`](reference/LAMBDA.md) for the combinators reference, [`reference/LAMBDA_TRACE.md`](reference/LAMBDA_TRACE.md) for the step-by-step reducer, and [`TUTORIAL_LAYER6_LAMBDA.md`](TUTORIAL_LAYER6_LAMBDA.md) for a plain-English walkthrough) builds the **function side** of Church–Turing: the lambda calculus, via **combinatory logic** — the three combinators **S**, **K**, **I**, which sidestep variable-capture by having no variables at all. Two views, cross-checked against each other and against the Church numerals in `alt-arithmetic.sh`:
 
 ```bash
 source ./lambda.sh
@@ -389,7 +389,7 @@ successor of 5  ->  6
 ├── tests/                 one suite per script   (run: bash tests/test-*.sh)
 ├── reference/             function-by-function deep dives: OVERVIEW · BOOLEAN_DSL ·
 │                            EML_OPERATOR · MATH_LIBRARY · ALT_ARITHMETIC ·
-│                            LIST_PROCESSING_KIT · COMBINATOR_CIRCUITS · LAMBDA ·
+│                            LIST_PROCESSING_KIT · COMBINATOR_CIRCUITS · LAMBDA · LAMBDA_TRACE ·
 │                            MACHINES · CIRCUIT_TRACE · ALT_ARITHMETIC_TRACE · COMBINATOR_TRACE
 ├── ETHOS.md               the project's ethos & guiding aim (why it's built this way)
 ├── TUTORIAL_*.md          the plain-English walkthroughs (Layers 1–8)

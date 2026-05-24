@@ -7,15 +7,16 @@ genuinely painful in bash — variable binding, α-renaming, name capture — it
 *every closed lambda term* can be built (combinatory completeness). No variables, so
 no capture problems.
 
-It holds two views of the same calculus, and `test-lambda.sh` (45 passing) shows they
+It holds two views of the same calculus, and `test-lambda.sh` (67 passing) shows they
 agree:
 
 - **As real functions** — S, K, I are genuine `apply`-able "fn values" (code strings),
   built on the same substrate as the combinator layer. They *compute*, and Church
   booleans and numerals fall straight out of them — reconnecting to the Church work in
-  `alt-arithmetic.sh`.
+  `alt-arithmetic.sh`. *(This document.)*
 - **As data you can reduce** — a symbolic reducer rewrites SKI terms written as strings
   (`"S K K x"`), step by step, so you can *watch* a term reduce to normal form.
+  *(Its own reference: [`LAMBDA_TRACE.md`](LAMBDA_TRACE.md).)*
 
 *New to the idea? [`TUTORIAL_LAYER6_LAMBDA.md`](../TUTORIAL_LAYER6_LAMBDA.md) is the
 plain-English, no-math walkthrough; this file is the precise reference.*
@@ -74,44 +75,17 @@ lambda_church_to_int "$(lambda_church 5)"             # 5     (read it back)
 the suite checks `lambda_church n` against `int_to_church n` (and `LAMBDA_TRUE`/`FALSE`
 against `CHURCH_TRUE`/`FALSE`) — two independent constructions, the same numbers.
 
-## Part 2 — the symbolic reducer
+## Part 2 — as data you can reduce
 
-A term is a space-separated string; application is left-associative; parens group.
-`S`/`K`/`I` are combinators, any other token is an opaque variable. Reduction is
-**normal order** (leftmost-outermost), by three rules — `I a → a`, `K a b → a`,
-`S a b c → a c (b c)`:
+The same calculus has a second life as **symbols you rewrite**: a normal-order reducer
+(`lc_step` / `lc_normalize` / `lc_trace`, and the annotated `lc_show`) takes an SKI term
+written as a string and reduces it step by step. That facet has its own focused
+reference — **[`LAMBDA_TRACE.md`](LAMBDA_TRACE.md)** — so this document can stay about the
+function side. The one-line taste:
 
 ```bash
-lc_normalize 'S K K x'            # x
-lc_normalize 'S (K S) K f g x'    # f (g x)        (that's B, falling out of S and K)
-lc_normalize "$(lc_church 3) f x" # f (f (f x))    (the numeral 3 as a reduction)
-```
-
-`lc_step` does one step; `lc_trace` prints the whole sequence — e.g. `SUCC ZERO f x`
-reducing to `f x`:
-
-```
-((S (S (K S) K)) (K I)) f x
-  → (S (K S) K) f ((K I) f) x
-  → (K S) f (K f) ((K I) f) x
-  → S (K f) ((K I) f) x
-  → (K f) x (((K I) f) x)
-  → f (((K I) f) x)
-  → f (I x)
-  → f x
-```
-
-`lc_show` is `lc_trace`'s annotated sibling: it labels each step with the **rule that
-fired** (S / K / I) and its schema, and ends with the step count — so you read *why* the
-term changed, not just that it did. (`_lc_redex_rule` names the next redex's combinator;
-`lc_show` reaches the same normal form, in the same number of steps, as `lc_normalize`.)
-
-```
-lc_show 'S K K x'
-  S K K x
-    → K x (K x)              [S:  S x y z → x z (y z)]
-    → x                      [K:  K x y → x]
-  normal form: x   (2 steps)
+lc_normalize 'S K K x'            # x        (S K K = I, by rewriting)
+lc_show 'S K K x'                 # the same reduction, each step labelled [S/K/I: schema]
 ```
 
 ## The payoff
@@ -124,7 +98,7 @@ in the project. The function side of Church–Turing, out of three letters.
 ## Tests
 
 ```bash
-bash tests/test-lambda.sh    # 45 passed, 0 failed
+bash tests/test-lambda.sh    # 67 passed, 0 failed
 ```
 
 > *Toward the capstone:* with the **function** side here (lambda / SKI + Church) and the
