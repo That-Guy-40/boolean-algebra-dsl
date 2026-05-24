@@ -207,7 +207,7 @@ Layer-1 twin bit-for-bit; `test-list-processing-kit.sh` grew 50 → 77. Full wri
 
 ---
 
-## The capstone — Church–Turing in action (`TUTORIAL_CHURCH_TURING.md`)
+## The capstone — Church–Turing in action (`TUTORIAL_LAYER7_CHURCH_TURING.md`)
 
 **Both prerequisites now exist** — TODO 1 (the machine layer: `state-machine.sh` +
 `turing-machine.sh`) and TODO 2 (the lambda layer: `lambda.sh`) are done. So **this is
@@ -216,7 +216,7 @@ ways** and showing the answers agree:
 
 **Status — ✅ BUILT (2026-05-23):** `church-turing.sh` + `test-church-turing.sh`
 (46 passing). `ct_demo` shows it; README / OVERVIEW / MANUAL_TESTING_IDEAS document it.
-(Plain-English `TUTORIAL_CHURCH_TURING.md` still deferred — the last open sub-item.)
+(Plain-English `TUTORIAL_LAYER7_CHURCH_TURING.md` still deferred — the last open sub-item.)
 
 - [x] Picked **successor (n→n+1)** and **addition (n+m)**.
 - [x] Each computed on **every** model and asserted equal: pure lambda/SKI
@@ -226,7 +226,7 @@ ways** and showing the answers agree:
 - [x] Featured the existing bridge: `church_to_bits` has a Church numeral drive the
       Layer-1 `inc` circuit (`ct_church_to_bits_value`) — the literal function↔machine
       handshake. (Successor via TM vs `church_succ` is exactly the suggested extension.)
-- [x] A plain-English `TUTORIAL_CHURCH_TURING.md` tying the whole project together
+- [x] A plain-English `TUTORIAL_LAYER7_CHURCH_TURING.md` tying the whole project together
       (gates → arithmetic → machines → lambda → "they're all the same power") — written
       (2026-05-23), in the Layer 1–6 voice; introduces the Turing machine for laypeople
       and stages the four-way "contest" that all agrees. **The capstone is fully done.**

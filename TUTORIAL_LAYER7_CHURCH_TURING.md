@@ -1,4 +1,4 @@
-# The Finale: One Sum, Every Machine, One Answer — A Plain-English Tutorial
+# Layer 7: The Finale — One Sum, Every Machine, One Answer — A Plain-English Tutorial
 
 *This is where the whole project comes together. Across these tutorials we built
 "computing" out of wildly different stuff — out of **switches**, out of **"do it n
