@@ -600,7 +600,7 @@ gates:
 | Layer | File(s) | Reference | What it is |
 |---|---|---|---|
 | Alternative arithmetic | `alt-arithmetic.sh` | [`ALT_ARITHMETIC.md`](ALT_ARITHMETIC.md) | Peano, **Church numerals**, and modular arithmetic — three definitions of "number" |
-| Combinator toolkit | `list-processing-kit.sh` | *(header)* | a Scheme-style `map` / `fold` / `zipwith` toolkit over lists |
+| Combinator toolkit | `list-processing-kit.sh` | [`LIST_PROCESSING_KIT.md`](LIST_PROCESSING_KIT.md) | a Scheme-style `map` / `fold` / `zipwith` toolkit over lists |
 | Combinator circuits | `combinator-circuits.sh` | [`COMBINATOR_CIRCUITS.md`](COMBINATOR_CIRCUITS.md) | Layer-1 word ops rebuilt from the function side (the adder as a `foldl`) |
 | Lambda calculus | `lambda.sh` | [`LAMBDA.md`](LAMBDA.md) | the **SKI** combinators; Church booleans / numerals built from S, K, I |
 | Machines | `state-machine.sh`, `turing-machine.sh` | [`MACHINES.md`](MACHINES.md) | a finite-state machine, then a bounded-tape **Turing machine** |

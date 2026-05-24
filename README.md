@@ -362,7 +362,7 @@ successor of 5  ->  6
 ├── tests/                 one suite per script   (run: bash tests/test-*.sh)
 ├── reference/             function-by-function deep dives: OVERVIEW · BOOLEAN_DSL ·
 │                            EML_OPERATOR · MATH_LIBRARY · ALT_ARITHMETIC ·
-│                            COMBINATOR_CIRCUITS · LAMBDA · MACHINES
+│                            LIST_PROCESSING_KIT · COMBINATOR_CIRCUITS · LAMBDA · MACHINES
 ├── ETHOS.md               the project's ethos & guiding aim (why it's built this way)
 ├── TUTORIAL_*.md          the plain-English walkthroughs (Layers 1–7)
 ├── MANUAL_TESTING_IDEAS.md   interactive experiments to try by hand
