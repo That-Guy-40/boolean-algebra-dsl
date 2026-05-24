@@ -263,7 +263,7 @@ Try changing the numbers. Keep them small (these are slow!), and notice that the
 
 *Layer 4 is the experimental wing of the project; for the precise, function-by-function
 reference (plus a menu of further "future models" to explore), see
-[`ALT_ARITHMETIC.md`](ALT_ARITHMETIC.md). And if you wandered into Layer 4 first, start
+[`reference/ALT_ARITHMETIC.md`](reference/ALT_ARITHMETIC.md). And if you wandered into Layer 4 first, start
 with Layers 1–3 — [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md), [`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md),
 [`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md) — which build the switches, the math operator, and
 the calculator that everything here quietly stands on.*

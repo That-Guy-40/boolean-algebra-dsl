@@ -17,7 +17,7 @@ agree:
 - **As data you can reduce** — a symbolic reducer rewrites SKI terms written as strings
   (`"S K K x"`), step by step, so you can *watch* a term reduce to normal form.
 
-*New to the idea? [`TUTORIAL_LAYER6_LAMBDA.md`](TUTORIAL_LAYER6_LAMBDA.md) is the
+*New to the idea? [`TUTORIAL_LAYER6_LAMBDA.md`](../TUTORIAL_LAYER6_LAMBDA.md) is the
 plain-English, no-math walkthrough; this file is the precise reference.*
 
 ## Loading
@@ -111,7 +111,7 @@ in the project. The function side of Church–Turing, out of three letters.
 ## Tests
 
 ```bash
-bash test-lambda.sh    # 45 passed, 0 failed
+bash tests/test-lambda.sh    # 45 passed, 0 failed
 ```
 
 > *Toward the capstone:* with the **function** side here (lambda / SKI + Church) and the

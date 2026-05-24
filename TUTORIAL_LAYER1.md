@@ -503,5 +503,5 @@ it until it stops surprising you.
 yes/no behind and pulls the exact same "build everything from one tiny piece" trick,
 but with **continuous** math — real numbers, `exp`, `ln`, sine, square roots — using
 a single operator called `eml`. (For the full technical reference across all three
-layers, see `OVERVIEW.md`.) The spirit is identical: one humble piece, stacked
+layers, see `reference/OVERVIEW.md`.) The spirit is identical: one humble piece, stacked
 cleverly, becomes a whole world.*

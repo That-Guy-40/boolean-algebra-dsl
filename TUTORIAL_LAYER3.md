@@ -334,5 +334,5 @@ hard yes/no calculator out of switches; **[`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2
 rebuilt arithmetic from one operator; and this layer turned six primitives into a
 scientific calculator that ends, fittingly, on a soft yes/no. For the rigorous,
 all-in-one reference — every function, every test, every derivation — see
-`OVERVIEW.md`. One idea, three times over: a single humble piece, stacked cleverly,
+`reference/OVERVIEW.md`. One idea, three times over: a single humble piece, stacked cleverly,
 becomes a whole world.*

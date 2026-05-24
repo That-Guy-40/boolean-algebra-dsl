@@ -72,7 +72,7 @@ rather than one `test-machines.sh`. Plain-English `TUTORIAL_MACHINES.md` deferre
 core), `test-lambda.sh`, later `TUTORIAL_LAMBDA.md`.
 
 **Status — ✅ DONE (2026-05-23).** Landed `lambda.sh` + `test-lambda.sh` (45 passing),
-the `LAMBDA.md` reference, and the plain-English `TUTORIAL_LAYER6_LAMBDA.md` ("three
+the `reference/LAMBDA.md` reference, and the plain-English `TUTORIAL_LAYER6_LAMBDA.md` ("three
 little machines build everything" — I/K/S as do-nothing/keepsake/wiring, true/false as
 choosers, numbers as repetition, and watching the symbols crunch).
 
@@ -132,11 +132,11 @@ are fast, pure Layer 1 — they stay in the now-1022-test core).
 - [x] **Width bridges:** `zero_extend`, `sign_extend`, and `trunc_bits` (named
       `trunc_bits`, *not* `truncate`, to avoid shadowing the coreutil of that name).
 - [x] Byte conveniences: `int_to_bits N 8` → `bits_to_int` round-trip tested; 8-bit
-      demos added to `README.md`/`OVERVIEW.md`. *(Named byte constants: skipped — the
+      demos added to `README.md`/`reference/OVERVIEW.md`. *(Named byte constants: skipped — the
       "consider" was optional and nothing needed them.)*
 - [x] **Tests at 8 bits:** ~70 new checks — add/sub/carry/overflow, all `alu8` flags,
       `sar` vs signed division, rotate identities, sign-extension round-trips.
-- [x] *(Doc)* `README.md` + `OVERVIEW.md` updated (function index, prose, coverage
+- [x] *(Doc)* `README.md` + `reference/OVERVIEW.md` updated (function index, prose, coverage
       table, examples). The plain-English `TUTORIAL_LAYER1.md` already makes the scaling
       point ("same trick, eight columns"), so no jargon was forced into that voice.
 
@@ -165,7 +165,7 @@ are fast, pure Layer 1 — they stay in the now-1022-test core).
 **Status — ✅ DONE (2026-05-23).** Landed `combinator-circuits.sh` + the 4a kit
 additions. `test-combinator-circuits.sh` (111 passing) proves every `fp_*` equals its
 Layer-1 twin bit-for-bit; `test-list-processing-kit.sh` grew 50 → 77. Full writeup in
-`COMBINATOR_CIRCUITS.md`.
+`reference/COMBINATOR_CIRCUITS.md`.
 
 ### 4a. Round out the kit's generic FP combinators (`list-processing-kit.sh`)
 - [x] `none`, `count_if pred xs`, `elem`, `find_index`.
@@ -200,7 +200,7 @@ Layer-1 twin bit-for-bit; `test-list-processing-kit.sh` grew 50 → 77. Full wri
       `fp_*` vs its Layer-1 twin over 4- and 8-bit grids. **The payoff:** `word_add`
       (loop) == `fp_word_add` (foldl) == `fp_word_add_scan` (scanl+zipwith3) ==
       `ripple_add8` (nibbles) — four constructions, one answer.
-- [x] *(Doc)* `COMBINATOR_CIRCUITS.md` reference + a README section, **and** the
+- [x] *(Doc)* `reference/COMBINATOR_CIRCUITS.md` reference + a README section, **and** the
       plain-English `TUTORIAL_LAYER5_COMBINATORS.md` ("the same machine, built the other
       way" — map/zipwith/fold as a stamping-belt/zipper/receipt, addition as "carry the
       1," four roads to one answer), in the no-math Layer 1–4 tutorial voice.
@@ -234,7 +234,7 @@ ways** and showing the answers agree:
 ---
 
 ## Possible later threads (parked)
-- The other nonstandard arithmetic models noted in `ALT_ARITHMETIC.md` (balanced
+- The other nonstandard arithmetic models noted in `reference/ALT_ARITHMETIC.md` (balanced
   ternary, Zeckendorf/Fibonacci base).
 - A pushdown automaton (FSM + a stack) to fill the middle of the Chomsky hierarchy
   between the FSM and the TM.

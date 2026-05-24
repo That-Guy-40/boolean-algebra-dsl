@@ -5,7 +5,7 @@ library bootstrapped from a single binary operator — and, beyond that core, a 
 layers that explore *computation itself*, capped by a Church–Turing demonstration
 that ties everything together.
 
-The **core** is two files — `boolean-funcs-new.sh` and `test-boolean-funcs.sh`
+The **core** is two files — `boolean-funcs-new.sh` and `tests/test-boolean-funcs.sh`
 (**1022** passing tests) — across the three layers diagrammed below. The later
 **computation layers** (alternative arithmetic, a combinator/lambda toolkit, and
 finite-state / Turing machines) each live in their own file with their own test suite
@@ -626,7 +626,7 @@ function) driving the Layer-1 `inc` circuit to build its own bit pattern.
 Run with:
 
 ```bash
-bash test-boolean-funcs.sh
+bash tests/test-boolean-funcs.sh
 # 1022 passed, 0 failed
 ```
 

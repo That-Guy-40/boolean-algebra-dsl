@@ -11,7 +11,7 @@
 # A separate helper handles each convention.
 
 cd "$(dirname "$0")" || exit 1
-source ./boolean-funcs-new.sh
+source ../boolean-funcs-new.sh
 
 PASS=0; FAIL=0
 

@@ -291,7 +291,7 @@ move together, no matter what you throw at them.
 *This is the flip side of **[`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md)**: that one wired
 a calculator out of switches by hand; this one rebuilt the same machine out of recipes
 and showed the two roads agree. For the precise, function-by-function reference, see
-[`COMBINATOR_CIRCUITS.md`](COMBINATOR_CIRCUITS.md). And the other tutorials in the set —
+[`reference/COMBINATOR_CIRCUITS.md`](reference/COMBINATOR_CIRCUITS.md). And the other tutorials in the set —
 **[`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md)** (one operator rebuilds the keypad),
 **[`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md)** (a scientific calculator), and
 **[`TUTORIAL_LAYER4_ALT_ARITHMETIC.md`](TUTORIAL_LAYER4_ALT_ARITHMETIC.md)** (stranger ways

@@ -6,8 +6,8 @@
 # the parity machine is tied back to Layer 1's `xor_all`. Fast (folds over short
 # lists).
 
-source "$(dirname "${BASH_SOURCE[0]}")/state-machine.sh"
-source "$(dirname "${BASH_SOURCE[0]}")/boolean-funcs-new.sh"   # xor_all, for the Layer-1 tie
+source "$(dirname "${BASH_SOURCE[0]}")/../state-machine.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../boolean-funcs-new.sh"   # xor_all, for the Layer-1 tie
 
 PASS=0; FAIL=0
 section () { printf '\n── %s\n' "$1"; }

@@ -13,7 +13,7 @@ Boolean layer so you can watch foundations touch hardware.
 
 ```bash
 source ./alt-arithmetic.sh   # pulls in boolean-funcs-new.sh automatically
-bash test-alt-arithmetic.sh  # 142 passed, 0 failed  (~10s — see "speed" below)
+bash tests/test-alt-arithmetic.sh  # 142 passed, 0 failed  (~10s — see "speed" below)
 ```
 
 > **A note on speed.** These models do arithmetic by *counting* — and the count

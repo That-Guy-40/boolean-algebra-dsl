@@ -4,7 +4,7 @@
 # gate layer, so they are slow. We verify correctness on a handful of small
 # cases rather than exhaustive grids. (The core suite is test-boolean-funcs.sh.)
 
-source "$(dirname "${BASH_SOURCE[0]}")/alt-arithmetic.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../alt-arithmetic.sh"
 
 PASS=0; FAIL=0
 section () { printf '\n── %s\n' "$1"; }

@@ -6,7 +6,7 @@
 # machine), and the circuit side (Layer-1 gates), lands on the same answer every
 # time. Church/lambda count through the gates, so this is slow — small inputs only.
 
-source "$(dirname "${BASH_SOURCE[0]}")/church-turing.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../church-turing.sh"
 
 PASS=0; FAIL=0
 section () { printf '\n── %s\n' "$1"; }

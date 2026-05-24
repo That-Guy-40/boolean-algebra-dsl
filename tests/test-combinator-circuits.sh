@@ -7,7 +7,7 @@
 # list-processing-kit.sh (the combinators), so both constructions are in scope at
 # once. Slow (gate-level subshells per bit), so it lives OUTSIDE the fast core suite.
 
-source "$(dirname "${BASH_SOURCE[0]}")/combinator-circuits.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../combinator-circuits.sh"
 
 PASS=0; FAIL=0
 section () { printf '\n── %s\n' "$1"; }

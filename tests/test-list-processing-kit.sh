@@ -5,7 +5,7 @@
 # the kit — no arithmetic models, no Layer-1 gates, nothing else. This proves it
 # stands alone. Fast: pure list processing, no subshelled circuits.
 
-source "$(dirname "${BASH_SOURCE[0]}")/list-processing-kit.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../list-processing-kit.sh"
 
 PASS=0; FAIL=0
 section () { printf '\n── %s\n' "$1"; }

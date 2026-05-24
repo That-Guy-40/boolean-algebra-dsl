@@ -6,7 +6,7 @@ scans** from `list-processing-kit.sh`. Every reconstruction is named `fp_*`
 (function-side) and is checked **bit-for-bit** against the Layer-1 original in
 `test-combinator-circuits.sh` (111 passing).
 
-*New to the idea? [`TUTORIAL_LAYER5_COMBINATORS.md`](TUTORIAL_LAYER5_COMBINATORS.md) is
+*New to the idea? [`TUTORIAL_LAYER5_COMBINATORS.md`](../TUTORIAL_LAYER5_COMBINATORS.md) is
 the plain-English, no-math walkthrough; this file is the precise reference.*
 
 This is the project's *combinator payoff*: the **machine side** (a loop walking the
@@ -106,8 +106,8 @@ fp_rol "$(int_to_bits 201 8)" 3    # cyclic rotate left by 3, same as rol
 ## Tests
 
 ```bash
-bash test-combinator-circuits.sh   # 111 passed, 0 failed   (slow: gate-level subshells)
-bash test-list-processing-kit.sh   #  77 passed, 0 failed   (the generic kit, standalone)
+bash tests/test-combinator-circuits.sh   # 111 passed, 0 failed   (slow: gate-level subshells)
+bash tests/test-list-processing-kit.sh   #  77 passed, 0 failed   (the generic kit, standalone)
 ```
 
 The combinator suite asserts each `fp_*` equals its Layer-1 twin across 4- and 8-bit

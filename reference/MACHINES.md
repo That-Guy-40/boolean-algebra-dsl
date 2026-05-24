@@ -104,8 +104,8 @@ question vivid: tiny machines, surprising runtimes, but they *do* stop.
 ## Tests
 
 ```bash
-bash test-state-machine.sh    # 37 passed, 0 failed
-bash test-turing-machine.sh   # 40 passed, 0 failed
+bash tests/test-state-machine.sh    # 37 passed, 0 failed
+bash tests/test-turing-machine.sh   # 40 passed, 0 failed
 ```
 
 > *Toward the capstone:* with the **machine** side here (FSM → Turing machine) and the

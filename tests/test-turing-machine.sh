@@ -8,8 +8,8 @@
 # never writes) and the busy beavers' exact (1-count, step-count). A touch slow
 # (a subshell per step), so it lives outside the fast core.
 
-source "$(dirname "${BASH_SOURCE[0]}")/turing-machine.sh"
-source "$(dirname "${BASH_SOURCE[0]}")/boolean-funcs-new.sh"   # inc, word_not, int_to_bits, bits_to_int
+source "$(dirname "${BASH_SOURCE[0]}")/../turing-machine.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../boolean-funcs-new.sh"   # inc, word_not, int_to_bits, bits_to_int
 
 PASS=0; FAIL=0
 section () { printf '\n── %s\n' "$1"; }

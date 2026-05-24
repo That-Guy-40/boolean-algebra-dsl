@@ -5,8 +5,8 @@
 # cross-checked against the existing Church layer (int_to_church) and booleans
 # (CHURCH_TRUE/FALSE), tying the two together. Fast (string rewriting + apply).
 
-source "$(dirname "${BASH_SOURCE[0]}")/lambda.sh"
-source "$(dirname "${BASH_SOURCE[0]}")/alt-arithmetic.sh"   # int_to_church / CHURCH_TRUE for the reconnection
+source "$(dirname "${BASH_SOURCE[0]}")/../lambda.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../alt-arithmetic.sh"   # int_to_church / CHURCH_TRUE for the reconnection
 
 PASS=0; FAIL=0
 section () { printf '\n── %s\n' "$1"; }

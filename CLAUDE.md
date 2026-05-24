@@ -2,7 +2,7 @@
 
 *Read me first. This is **why** the project exists and **how** to work in it; see
 `TODO.md` for the concrete roadmap (and the Church–Turing north star), and
-`OVERVIEW.md` / `README.md` for the function-by-function tour.*
+`reference/OVERVIEW.md` / `README.md` for the function-by-function tour.*
 
 ## Why this project exists
 
