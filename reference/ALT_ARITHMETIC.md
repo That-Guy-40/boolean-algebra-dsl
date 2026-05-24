@@ -237,3 +237,10 @@ Not built yet, but natural next experiments in the same file:
   non-consecutive Fibonacci numbers, with its own carry rules.
 - **Bijective base-k**, **continued fractions**, **Gödel numbering** — other
   representations worth poking at.
+
+---
+
+*Want to **watch** these models compute? [`ALT_ARITHMETIC_TRACE.md`](ALT_ARITHMETIC_TRACE.md)
+is a read-only viewer — `peano_trace` draws the successor tower, `church_trace` watches a
+numeral iterate (and drive the gates), and `mod_trace` shows the clock wrap. The
+plain-English build is [`../TUTORIAL_LAYER4_ALT_ARITHMETIC.md`](../TUTORIAL_LAYER4_ALT_ARITHMETIC.md).*

@@ -290,6 +290,15 @@ mod_add_bits4 12 11                # 7   (= 23 mod 16, computed by the 4-bit add
 
 These do arithmetic by *counting through the gates*, so they're intentionally slow and kept out of the core; their own suite is `test-alt-arithmetic.sh` (142 passing).
 
+**Want to *see* a number get built?** `alt-arithmetic-trace.sh` (see [`reference/ALT_ARITHMETIC_TRACE.md`](reference/ALT_ARITHMETIC_TRACE.md)) is a read-only viewer over this layer, with a trace shaped to each model: `peano_trace` shows the successor tower (each `+1` a Layer-1 `inc`), `church_trace` watches a numeral apply a step function *n* times (`bits` mode drives the real gates — the function↔circuit handshake), and `mod_trace` / `mod_trace_pow` show the clock wrap and square-and-multiply.
+
+```bash
+source ./alt-arithmetic-trace.sh
+peano_trace add 0 5          # the tower: 5 = S(S(S(S(S(0))))), each S a real inc
+church_trace 4 bits          # numeral 4 driving Layer-1 inc to build its own bits
+mod_trace add 10 5 12        # 10 + 5 on a 12-clock -> 3
+```
+
 ## Combinator circuits — Layer 1 from the function side
 
 The flip side of the experimental layer: `combinator-circuits.sh` (see [`reference/COMBINATOR_CIRCUITS.md`](reference/COMBINATOR_CIRCUITS.md) for the reference and [`TUTORIAL_LAYER5_COMBINATORS.md`](TUTORIAL_LAYER5_COMBINATORS.md) for a plain-English walkthrough) rebuilds Layer 1's word ops **declaratively**, from the `list-processing-kit.sh` combinators (`map`/`zipwith`/`foldl`/`scanl`) — and the test suite proves the two constructions agree bit-for-bit.
@@ -367,12 +376,12 @@ successor of 5  ->  6
 ├── *.sh                   the library: boolean-funcs-new · alt-arithmetic ·
 │                            list-processing-kit · combinator-circuits · lambda ·
 │                            state-machine · turing-machine · church-turing ·
-│                            circuit-trace (a viewer over Layer 1)
+│                            circuit-trace · alt-arithmetic-trace  (viewers)
 ├── tests/                 one suite per script   (run: bash tests/test-*.sh)
 ├── reference/             function-by-function deep dives: OVERVIEW · BOOLEAN_DSL ·
 │                            EML_OPERATOR · MATH_LIBRARY · ALT_ARITHMETIC ·
 │                            LIST_PROCESSING_KIT · COMBINATOR_CIRCUITS · LAMBDA ·
-│                            MACHINES · CIRCUIT_TRACE
+│                            MACHINES · CIRCUIT_TRACE · ALT_ARITHMETIC_TRACE
 ├── ETHOS.md               the project's ethos & guiding aim (why it's built this way)
 ├── TUTORIAL_*.md          the plain-English walkthroughs (Layers 1–8)
 ├── MANUAL_TESTING_IDEAS.md   interactive experiments to try by hand
@@ -391,7 +400,7 @@ bash tests/test-boolean-funcs.sh
 
 Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions (incl. complement reductions `nand_all`/`nor_all`/`xnor_all` as exact negations, `all`/`any`/`none` aliases, and two-word `and_any`/`or_any`/`xor_any` cross-checked against `bits_eq` and `is_zero`), the `mux`/`word_mux` selector and `bits_min`/`bits_max` over a full grid, word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts (plus arithmetic `sar` and cyclic `rol`/`ror`), the width-generic `word_add`/`word_sub` (cross-checked bit-for-bit against `ripple_add4`/`ripple_add8`/`ripple_sub4`, and run at 8- and 16-bit width), the `zero_extend`/`sign_extend`/`trunc_bits` width bridges, the `alu4` and `alu8` ALUs (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases. The numeric layers are pinned against **independent `bc` oracles**: the base `eml(x,y)` operator against `e(x)−ln(y)`, the EML ops (`+`, `−`, `×`, `÷`, `^`, `neg`, `exp`, `ln`) against plain `bc` arithmetic — proving the `exp(x)−ln(y)` construction rebuilds ordinary math — both `eml_recip` and `eml_recip_auto` against `bc`'s `1/x`, the inverse hyperbolics against their `ln`/`sqrt` closed forms, and the derived trig (`tan`/`cot`/`sec`/`csc`) against `bc`'s `s()`/`c()` ratios. The shared `e` constant in the suite is `bc`'s `e(1)`, not `eml_e`, so the EML "= e" checks never compare the layer to itself.
 
-The slower / standalone layers have their own suites (all under `tests/`): `test-list-processing-kit.sh` (77 — the combinator kit alone, no Layer 1), `test-alt-arithmetic.sh` (142 — Peano / Church / modular), `test-combinator-circuits.sh` (111 — the function-side `fp_*` rebuilds, each checked bit-for-bit against its Layer-1 twin), `test-lambda.sh` (45 — SKI combinatory logic, cross-checked against the Church layer), `test-state-machine.sh` (37 — FSM verdicts vs ground truth), `test-turing-machine.sh` (40 — Turing machines, incl. binary-increment == `inc`), `test-church-turing.sh` (46 — the capstone: one function, every model, same answer), and `test-circuit-trace.sh` (1118 — the Layer-1 viewer, every trace pinned against the real `word_add`/`word_sub`/`alu`).
+The slower / standalone layers have their own suites (all under `tests/`): `test-list-processing-kit.sh` (77 — the combinator kit alone, no Layer 1), `test-alt-arithmetic.sh` (142 — Peano / Church / modular), `test-combinator-circuits.sh` (111 — the function-side `fp_*` rebuilds, each checked bit-for-bit against its Layer-1 twin), `test-lambda.sh` (45 — SKI combinatory logic, cross-checked against the Church layer), `test-state-machine.sh` (37 — FSM verdicts vs ground truth), `test-turing-machine.sh` (40 — Turing machines, incl. binary-increment == `inc`), `test-church-turing.sh` (46 — the capstone: one function, every model, same answer), `test-circuit-trace.sh` (1118 — the Layer-1 viewer, every trace pinned against the real `word_add`/`word_sub`/`alu`), and `test-alt-arithmetic-trace.sh` (131 — the Layer-4 viewer, pinned against the real `peano_*`/`church_*`/`mod_*`).
 
 ## Attribution
 
