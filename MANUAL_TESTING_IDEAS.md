@@ -1,9 +1,38 @@
 # Manual Testing Ideas
 
-A collection of interactive experiments to try at the shell. Layers 1–3 load with
-`source ./boolean-funcs-new.sh`; the later layers (alternative arithmetic, combinators,
-lambda) each note the file to `source` at the top of their section.
-These go beyond the automated suite — they're for intuition-building, live exploration, and stress-testing edge cases by hand.
+A collection of interactive experiments to try at the shell — for intuition-building,
+live exploration, and stress-testing edge cases by hand, beyond the automated suite.
+**Each snippet is a fragment of one continuing session: run the
+[Setup](#setup-run-this-once) once before anything else.**
+
+---
+
+## Setup (run this once)
+
+Every snippet below assumes a couple of things already exist in your shell. Run this
+**once**, from *inside this repo directory* (the `source` path is relative):
+
+```bash
+source ./boolean-funcs-new.sh    # Layers 1–3: the gates, EML, and the math library
+
+# tiny decimal ⇄ LSB-first-bits helpers the Layer-1 snippets lean on (the test suite
+# calls these dec_to_bits / bits_to_dec; they aren't part of the library itself)
+d2b() { local n=$1 w=$2 i out=""; for ((i=0;i<w;i++)); do out+="$(( (n>>i)&1 )) "; done; echo "${out% }"; }
+b2d() { local d=0 i=0 b; for b in $1; do d=$((d+(b<<i))); i=$((i+1)); done; echo "$d"; }
+```
+
+The later layers each need their own `source` line too — run it once at the top of that
+section before its snippets:
+
+| section | run first |
+|---|---|
+| Layer 4 — alternative arithmetic | `source ./alt-arithmetic.sh` |
+| Layer 5 — combinators | `source ./list-processing-kit.sh` and/or `source ./combinator-circuits.sh` |
+| Layer 6 — lambda | `source ./lambda.sh` |
+| The capstone | `source ./church-turing.sh` |
+
+Pasting a snippet *without* its setup is the one easy way to get `command not found` —
+the code itself is fine.
 
 ---
 
@@ -223,17 +252,12 @@ ripple_add4  1 1 1 1  1 1 1 1  0   # → 0 1 1 1 1  (cout=1 → 30)
 functions — just `source ./boolean-funcs-new.sh` and call them. Everything below
 is LSB-first (bit 0 first).
 
-### Convenience helpers for interactive play
+### Convenience helpers (`d2b` / `b2d`)
 
-The test suite defines `dec_to_bits` / `bits_to_dec`, but they aren't in the
-library. Paste these tiny equivalents so the snippets below are self-contained:
+The `d2b` / `b2d` decimal⇄bits helpers from [Setup](#setup-run-this-once) are what make
+the snippets below readable — they decode the LSB-first bit strings the circuits emit:
 
 ```bash
-source ./boolean-funcs-new.sh
-
-d2b() { local n=$1 w=$2 i out=""; for ((i=0;i<w;i++)); do out+="$(( (n>>i)&1 )) "; done; echo "${out% }"; }
-b2d() { local d=0 i=0 b; for b in $1; do d=$((d+(b<<i))); i=$((i+1)); done; echo "$d"; }
-
 d2b 200 8                 # 0 0 0 1 1 0 0 1
 b2d "0 0 0 1 1 0 0 1"     # 200   (decoding the whole adder output incl. carry
                           #        gives the exact unsigned value)
@@ -493,9 +517,8 @@ mul 5 3    # 15
 ## Layer 1 — 8-bit words: width-generic add/sub, `alu8`, shifts & rotates
 
 The same gates scale straight up from the 4-bit nibble to the 8-bit byte (and
-beyond). These reuse the `d2b` / `b2d` helpers from the
-[Multi-bit Circuits](#layer-1--multi-bit-circuits-8-bit-adder-subtractor-comparator)
-section above; two more decoders make the signed outputs readable:
+beyond). These reuse the `d2b` / `b2d` helpers from [Setup](#setup-run-this-once);
+two more decoders make the signed outputs readable:
 
 ```bash
 # signed decoders for the snippets below
