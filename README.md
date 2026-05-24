@@ -2,7 +2,7 @@
 
 A pure-Bash library for Boolean logic and continuous mathematics, built from the ground up in three layers — each one derived entirely from the layer below it. The project's guiding **ethos** and aim — *why* it's built this way — live in [`ETHOS.md`](ETHOS.md).
 
-> **New to this? Start here →** three plain-English, no-math walkthroughs build the project from the ground up: [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md) (yes/no switches → gates → binary → a working calculator chip), [`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md) (one math operator, `eml`, rebuilds the whole calculator keypad — add, multiply, division, even sine), and [`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md) (six primitives become a full scientific calculator, ending on the `sigmoid` function behind neural networks). If you're not a math person, read those first. Three companion walkthroughs go further once the trilogy clicks: [`TUTORIAL_LAYER4_ALT_ARITHMETIC.md`](TUTORIAL_LAYER4_ALT_ARITHMETIC.md) (stranger ways to define *number*), [`TUTORIAL_LAYER5_COMBINATORS.md`](TUTORIAL_LAYER5_COMBINATORS.md) (the same calculator, rebuilt from recipes instead of wiring), and [`TUTORIAL_LAYER6_LAMBDA.md`](TUTORIAL_LAYER6_LAMBDA.md) (all of computing, out of three tiny functions). The **finale**, [`TUTORIAL_LAYER7_CHURCH_TURING.md`](TUTORIAL_LAYER7_CHURCH_TURING.md), shows every one of those roads computing the very same things.
+> **New to this? Start here →** three plain-English, no-math walkthroughs build the project from the ground up: [`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md) (yes/no switches → gates → binary → a working calculator chip), [`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md) (one math operator, `eml`, rebuilds the whole calculator keypad — add, multiply, division, even sine), and [`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md) (six primitives become a full scientific calculator, ending on the `sigmoid` function behind neural networks). If you're not a math person, read those first. Four companion walkthroughs go further once the trilogy clicks: [`TUTORIAL_LAYER4_ALT_ARITHMETIC.md`](TUTORIAL_LAYER4_ALT_ARITHMETIC.md) (stranger ways to define *number*), [`TUTORIAL_LAYER5_COMBINATORS.md`](TUTORIAL_LAYER5_COMBINATORS.md) (the same calculator, rebuilt from recipes instead of wiring), [`TUTORIAL_LAYER6_LAMBDA.md`](TUTORIAL_LAYER6_LAMBDA.md) (all of computing, out of three tiny functions), and [`TUTORIAL_LAYER7_MACHINES.md`](TUTORIAL_LAYER7_MACHINES.md) (the machine side — a rule-follower and a roll of tape). The **finale**, [`TUTORIAL_LAYER8_CHURCH_TURING.md`](TUTORIAL_LAYER8_CHURCH_TURING.md), shows every one of those roads computing the very same things.
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -317,7 +317,7 @@ lc_trace "$(lc_church 1) f x"         # SUCC ZERO f x  →  …  →  f x
 
 ## A machine layer — the other side of Church–Turing
 
-If `lambda.sh` is the **function** side, `state-machine.sh` and `turing-machine.sh` (see [`reference/MACHINES.md`](reference/MACHINES.md)) are the **machine** side: a finite state machine — where *running it is a left fold of the transition over the input* — and then a Turing machine, that same control plus a bounded read/write tape.
+If `lambda.sh` is the **function** side, `state-machine.sh` and `turing-machine.sh` (see [`reference/MACHINES.md`](reference/MACHINES.md) for the reference and [`TUTORIAL_LAYER7_MACHINES.md`](TUTORIAL_LAYER7_MACHINES.md) for a plain-English walkthrough) are the **machine** side: a finite state machine — where *running it is a left fold of the transition over the input* — and then a Turing machine, that same control plus a bounded read/write tape.
 
 ```bash
 source ./turing-machine.sh        # sources state-machine.sh (the FSM) too
@@ -350,7 +350,7 @@ successor of 5  ->  6
   => all four models agree
 ```
 
-`ct_show_add N M` does the same for addition; `ct_demo` runs a tour; and `ct_church_to_bits_value N` is the literal handshake — a Church numeral (a pure function) driving the `inc` gate circuit to build its own bits. `test-church-turing.sh` (46 passing) asserts the agreement. **This is the gates → arithmetic → machines → lambda → "all the same power" payoff the whole repo builds toward** — and [`TUTORIAL_LAYER7_CHURCH_TURING.md`](TUTORIAL_LAYER7_CHURCH_TURING.md) is its plain-English walkthrough.
+`ct_show_add N M` does the same for addition; `ct_demo` runs a tour; and `ct_church_to_bits_value N` is the literal handshake — a Church numeral (a pure function) driving the `inc` gate circuit to build its own bits. `test-church-turing.sh` (46 passing) asserts the agreement. **This is the gates → arithmetic → machines → lambda → "all the same power" payoff the whole repo builds toward** — and [`TUTORIAL_LAYER8_CHURCH_TURING.md`](TUTORIAL_LAYER8_CHURCH_TURING.md) is its plain-English walkthrough.
 
 ## Repository layout
 
@@ -364,7 +364,7 @@ successor of 5  ->  6
 │                            EML_OPERATOR · MATH_LIBRARY · ALT_ARITHMETIC ·
 │                            LIST_PROCESSING_KIT · COMBINATOR_CIRCUITS · LAMBDA · MACHINES
 ├── ETHOS.md               the project's ethos & guiding aim (why it's built this way)
-├── TUTORIAL_*.md          the plain-English walkthroughs (Layers 1–7)
+├── TUTORIAL_*.md          the plain-English walkthroughs (Layers 1–8)
 ├── MANUAL_TESTING_IDEAS.md   interactive experiments to try by hand
 └── TODO.md                the roadmap (the whole Church–Turing arc: done)
 ```

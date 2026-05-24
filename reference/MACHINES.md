@@ -113,3 +113,12 @@ bash tests/test-turing-machine.sh   # 40 passed, 0 failed
 > Church–Turing finally both exist. The finale is to compute one function *both* ways —
 > a Turing machine and a Church/lambda term — and watch them agree (e.g. this binary
 > increment vs. `church_succ`). See `TODO.md`.
+
+---
+
+*This is the reference; the plain-English walkthrough is
+[`../TUTORIAL_LAYER7_MACHINES.md`](../TUTORIAL_LAYER7_MACHINES.md) (a turnstile, a parity
+counter, then a tape machine that does Layer 1's arithmetic). The finale that makes the
+machine and function sides agree is
+[`../TUTORIAL_LAYER8_CHURCH_TURING.md`](../TUTORIAL_LAYER8_CHURCH_TURING.md). For every
+layer at once, see [`OVERVIEW.md`](OVERVIEW.md).*

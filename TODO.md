@@ -5,7 +5,7 @@ Church–Turing are built and shown to agree. From a single NAND gate up through
 ALU, three models of *number* (Peano · Church · modular), a combinator/lambda calculus,
 and finite-state + Turing machines — capped by `church-turing.sh`, which computes the
 same function as a gate circuit, a Turing machine, Church numerals, *and* pure lambda,
-and proves they all match. Every layer has a plain-English tutorial (Layers 1–7) and a
+and proves they all match. Every layer has a plain-English tutorial (Layers 1–8) and a
 focused [`reference/`](reference/) doc; all 8 test suites pass (1520 tests). Everything
 below is either history (✅ done) or **parked ideas** — no open work remains.
 
@@ -41,7 +41,7 @@ exploration and learning, starting with ourselves.**
 
 **Files:** `state-machine.sh` + `turing-machine.sh`, each with its own test file
 (`test-state-machine.sh` / `test-turing-machine.sh`) — kept the per-file convention
-rather than one `test-machines.sh`. Plain-English `TUTORIAL_MACHINES.md` deferred.
+rather than one `test-machines.sh`. Plain-English `TUTORIAL_LAYER7_MACHINES.md` — ✅ written.
 
 ### 1a. Finite State Machine (`state-machine.sh`) — ✅ DONE (2026-05-23)
 - [x] Generic FSM driver: a transition table (rules `state,symbol->nextstate`), start
@@ -216,7 +216,7 @@ Layer-1 twin bit-for-bit; `test-list-processing-kit.sh` grew 50 → 77. Full wri
 
 ---
 
-## The capstone — Church–Turing in action (`TUTORIAL_LAYER7_CHURCH_TURING.md`)
+## The capstone — Church–Turing in action (`TUTORIAL_LAYER8_CHURCH_TURING.md`)
 
 **Both prerequisites existed** — TODO 1 (the machine layer: `state-machine.sh` +
 `turing-machine.sh`) and TODO 2 (the lambda layer: `lambda.sh`) — so the punchline got
@@ -224,7 +224,7 @@ built: computing the **same function two ways** and showing the answers agree.
 
 **Status — ✅ DONE (2026-05-23):** `church-turing.sh` + `test-church-turing.sh`
 (46 passing); `ct_demo` shows it; README / OVERVIEW / MANUAL_TESTING_IDEAS document it;
-and the plain-English `TUTORIAL_LAYER7_CHURCH_TURING.md` is written. Nothing left open.
+and the plain-English `TUTORIAL_LAYER8_CHURCH_TURING.md` is written. Nothing left open.
 
 - [x] Picked **successor (n→n+1)** and **addition (n+m)**.
 - [x] Each computed on **every** model and asserted equal: pure lambda/SKI
@@ -234,9 +234,9 @@ and the plain-English `TUTORIAL_LAYER7_CHURCH_TURING.md` is written. Nothing lef
 - [x] Featured the existing bridge: `church_to_bits` has a Church numeral drive the
       Layer-1 `inc` circuit (`ct_church_to_bits_value`) — the literal function↔machine
       handshake. (Successor via TM vs `church_succ` is exactly the suggested extension.)
-- [x] A plain-English `TUTORIAL_LAYER7_CHURCH_TURING.md` tying the whole project together
+- [x] A plain-English `TUTORIAL_LAYER8_CHURCH_TURING.md` tying the whole project together
       (gates → arithmetic → machines → lambda → "they're all the same power") — written
-      (2026-05-23), in the Layer 1–6 voice; introduces the Turing machine for laypeople
+      (2026-05-23), in the Layer 1–7 voice; introduces the Turing machine for laypeople
       and stages the four-way "contest" that all agrees. **The capstone is fully done.**
 
 ---

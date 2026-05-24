@@ -1,9 +1,9 @@
-# Layer 7: The Finale — One Sum, Every Machine, One Answer — A Plain-English Tutorial
+# Layer 8: The Finale — One Sum, Every Machine, One Answer — A Plain-English Tutorial
 
 *This is where the whole project comes together. Across these tutorials we built
 "computing" out of wildly different stuff — out of **switches**, out of **"do it n
-times,"** out of **three tiny functions**, and (in a moment) out of a **paper tape and
-a rule-follower**. They look like four separate universes. The punchline of this
+times,"** out of **three tiny functions**, and out of a **paper tape and a
+rule-follower**. They look like four separate universes. The punchline of this
 finale — and one of the deepest facts in all of science — is that **they can all
 compute exactly the same things.** You're about to watch four of them add the same
 numbers and land on the same answer. No equations. Just the big reveal.*
@@ -219,8 +219,9 @@ parts refuse to disagree.
 switches; **[2](TUTORIAL_LAYER2.md)** and **[3](TUTORIAL_LAYER3.md)** grew real-number
 math from a single operator; **[4](TUTORIAL_LAYER4_ALT_ARITHMETIC.md)** asked what a
 number even *is*; **[5](TUTORIAL_LAYER5_COMBINATORS.md)** rebuilt the calculator out of
-recipes; **[6](TUTORIAL_LAYER6_LAMBDA.md)** built everything from three tiny functions —
-and this finale showed that all of it, every road, computes the same things. One humble
-idea — switches, stacked cleverly — became a whole world, and then turned out to be
-*the only world there is.* For the precise reference behind the finale, see the capstone
-section of `reference/OVERVIEW.md` and the comments in `church-turing.sh`.*
+recipes; **[6](TUTORIAL_LAYER6_LAMBDA.md)** built everything from three tiny functions;
+**[7](TUTORIAL_LAYER7_MACHINES.md)** built the machine side — a rule-follower and a roll
+of tape — and this finale showed that all of it, every road, computes the same things.
+One humble idea — switches, stacked cleverly — became a whole world, and then turned out
+to be *the only world there is.* For the precise reference behind the finale, see the
+capstone section of `reference/OVERVIEW.md` and the comments in `church-turing.sh`.*

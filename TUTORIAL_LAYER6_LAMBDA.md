@@ -303,8 +303,11 @@ poking until it stops feeling impossible.
 
 *This is the **function side** of the project's grand idea. **[`TUTORIAL_LAYER1.md`](TUTORIAL_LAYER1.md)**
 built the *machine* side out of switches; this layer built an equal-and-opposite world
-out of functions, and the punchline still to come is that the two are secretly the
-same power. For the precise reference, see [`reference/LAMBDA.md`](reference/LAMBDA.md). The rest of the set:
+out of functions. Next, **[`TUTORIAL_LAYER7_MACHINES.md`](TUTORIAL_LAYER7_MACHINES.md)**
+builds the *other* machine side — a rule-follower and a roll of tape — and then the
+**[finale, `TUTORIAL_LAYER8_CHURCH_TURING.md`](TUTORIAL_LAYER8_CHURCH_TURING.md)**,
+delivers the punchline: all of them are secretly the same power. For the precise
+reference, see [`reference/LAMBDA.md`](reference/LAMBDA.md). The rest of the set:
 the core trilogy **[`TUTORIAL_LAYER2.md`](TUTORIAL_LAYER2.md)** and **[`TUTORIAL_LAYER3.md`](TUTORIAL_LAYER3.md)**,
 plus the companions **[`TUTORIAL_LAYER4_ALT_ARITHMETIC.md`](TUTORIAL_LAYER4_ALT_ARITHMETIC.md)**
 (stranger ways to define number) and **[`TUTORIAL_LAYER5_COMBINATORS.md`](TUTORIAL_LAYER5_COMBINATORS.md)**
