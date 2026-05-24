@@ -1,6 +1,8 @@
 # Manual Testing Ideas
 
-A collection of interactive experiments to try at the shell after `source ./boolean-funcs-new.sh`.
+A collection of interactive experiments to try at the shell. Layers 1–3 load with
+`source ./boolean-funcs-new.sh`; the later layers (alternative arithmetic, combinators,
+lambda) each note the file to `source` at the top of their section.
 These go beyond the automated suite — they're for intuition-building, live exploration, and stress-testing edge cases by hand.
 
 ---
@@ -488,6 +490,101 @@ mul 5 3    # 15
 
 ---
 
+## Layer 1 — 8-bit words: width-generic add/sub, `alu8`, shifts & rotates
+
+The same gates scale straight up from the 4-bit nibble to the 8-bit byte (and
+beyond). These reuse the `d2b` / `b2d` helpers from the
+[Multi-bit Circuits](#layer-1--multi-bit-circuits-8-bit-adder-subtractor-comparator)
+section above; two more decoders make the signed outputs readable:
+
+```bash
+# signed decoders for the snippets below
+sub_dec() { local -a o=($1); local n=$((${#o[@]}-1)); local v=$(b2d "${o[*]:0:n}"); [ "${o[n]}" = 0 ] && v=$((v-(1<<n))); echo "$v"; }   # ripple_sub/word_sub output -> signed
+wsigned() { local -a o=($1); local n=${#o[@]};       local v=$(b2d "$1");           [ "${o[n-1]}" = 1 ] && v=$((v-(1<<n))); echo "$v"; }  # a plain word -> signed
+```
+
+### `word_add` / `word_sub` — the ripple adder, width-generic
+
+`word_add` is the same ripple-carry adder as `ripple_add4`/`ripple_add8`, but it
+takes two bit **strings** of any width — so no 17-argument call, and the *very same
+function* adds bytes, 16-bit words, anything:
+
+```bash
+b2d "$(word_add "$(d2b 200 8)"   "$(d2b 100 8)")"     # 300   (8-bit + carry)
+b2d "$(word_add "$(d2b 1000 16)" "$(d2b 1000 16)")"   # 2000  (same fn, 16-bit)
+
+# cross-check it against the hand-wired ripple_add8 — two constructions, one answer:
+for a in 0 100 200 255; do for b in 0 55 200 255; do
+    w=$(b2d "$(word_add "$(d2b $a 8)" "$(d2b $b 8)")")
+    r=$(b2d "$(ripple_add8 $(d2b $a 8) $(d2b $b 8))")
+    echo "$a+$b: word_add=$w ripple_add8=$r  $([ "$w" = "$r" ] && echo ok || echo BAD)"
+done; done
+```
+
+`word_sub` is two's-complement subtraction; its trailing bit is the no-borrow flag,
+exactly like `ripple_sub*`:
+
+```bash
+sub_dec "$(word_sub "$(d2b 100 8)" "$(d2b 50 8)")"    # 50
+sub_dec "$(word_sub "$(d2b 50 8)"  "$(d2b 100 8)")"   # -50
+```
+
+### `alu8` — drive the byte-wide ALU like a processor
+
+`alu8 OP A B` is the byte-width twin of `alu4`: same op set, same `Z C N V` flags,
+output `R0..R7 Z C N V`. A reader:
+
+```bash
+alu8_show() {                      # alu8_show OP a b   (a, b decimal 0..255)
+    local op=$1 a=$2 b=$3 out res flags
+    out=$(alu8 $op $(d2b $a 8) $(d2b $b 8))
+    res=$(echo "$out" | cut -d' ' -f1-8); flags=$(echo "$out" | cut -d' ' -f9-12)
+    printf "%-4s %3d,%3d -> %3d   ZCNV=%s\n" "$op" "$a" "$b" "$(b2d "$res")" "$flags"
+}
+for op in add sub and or xor slt shl shr; do alu8_show $op 200 100; done
+
+# make the flags fire at byte scale (signed range is -128..127):
+alu8_show add 100  50    # 150  N=1 V=1   (overflows signed 8-bit)
+alu8_show add 128 128    # 0    Z=1 C=1 V=1  (two "negatives" sum to zero, with carry)
+alu8_show sub  50 100    # 206 (= -50)  N=1, C=0 (borrow)
+```
+
+### `sar` vs `shr` — arithmetic vs logical right shift
+
+`shr` slides a `0` into the top; `sar` replicates the sign bit, so it divides a
+*signed* value correctly. On a negative number they part ways:
+
+```bash
+wsigned "$(d2b 240 8)"           # -16   (240 is -16 in signed 8-bit)
+wsigned "$(sar "$(d2b 240 8)")"  # -8    (arithmetic shift: -16 / 2, sign kept)
+b2d     "$(shr "$(d2b 240 8)")"  # 120   (logical shift: a 0 slid in -> wrong for signed)
+```
+
+### `rol` / `ror` — cyclic rotates lose nothing
+
+A rotate carries bits off one end back onto the other, so it preserves the popcount,
+and rotating by the full width is the identity:
+
+```bash
+rol "$(d2b 1 8)"     # 0 1 0 0 0 0 0 0   (bit slides up)
+rol "$(d2b 128 8)"   # 1 0 0 0 0 0 0 0   (top bit wraps round to the bottom)
+[ "$(rol "$(d2b 201 8)" 8)" = "$(d2b 201 8)" ] && echo "rotate by full width = identity"
+echo "popcount kept: $(popcount "$(d2b 201 8)") = $(popcount "$(rol "$(d2b 201 8)" 3)")"
+```
+
+### Width bridges — move a value between 4, 8, 16 bits
+
+`sign_extend` preserves the *signed* value (it copies the sign bit); `zero_extend`
+preserves the *unsigned* value; `trunc_bits` keeps the low bits:
+
+```bash
+wsigned "$(sign_extend "$(d2b 12 4)" 8)"   # -4   (4-bit 12 = -4, still -4 at 8 bits)
+b2d     "$(zero_extend "$(d2b 12 4)" 8)"   # 12   (unsigned 12 stays 12)
+b2d     "$(trunc_bits  "$(d2b 250 8)" 4)"  # 10   (low nibble: 250 mod 16)
+```
+
+---
+
 ## Layer 2 — EML Operator
 
 ### Verify the ln derivation step by step
@@ -732,6 +829,155 @@ done
 
 ---
 
+## Layer 4 — Alternative arithmetic (Peano · Church · modular)
+
+```bash
+source ./alt-arithmetic.sh
+```
+
+Three completely different answers to "what is a number," each still able to do
+arithmetic, and each bottoming out in the Layer-1 gates. **Heads-up: this layer is
+gloriously slow** — it does arithmetic by *counting through the gates* — so keep the
+numbers small and expect a pause.
+
+### Peano — numbers as tally marks ("+1" is the real ripple-carry circuit)
+
+```bash
+# add and multiply are pure counting; cross-check a grid against shell arithmetic:
+for a in 0 2 5; do for b in 0 3 4; do
+    got=$(peano_to_int "$(peano_add "$(int_to_peano $a)" "$(int_to_peano $b)")")
+    echo "$a + $b = $got  $([ "$got" = "$((a+b))" ] && echo ok || echo BAD)"
+done; done
+peano_to_int "$(peano_mult "$(int_to_peano 3)" "$(int_to_peano 4)")"   # 12
+```
+
+### Church — a number *is* "do something n times"
+
+Hand the number 5 an action and watch it repeat it exactly five times:
+
+```bash
+apply "$(apply "$(int_to_church 5)" 'printf "%s*" "$1"')" ""    # *****
+
+# arithmetic by composing repetitions:
+church_to_int "$(church_plus "$(int_to_church 2)" "$(int_to_church 3)")"   # 5
+church_to_int "$(church_pow  "$(int_to_church 2)" "$(int_to_church 5)")"   # 32
+
+# subtraction floors at zero (no negatives); compare and divide come for free:
+church_to_int "$(church_sub "$(int_to_church 2)" "$(int_to_church 5)")"    # 0
+church_lt "$(int_to_church 2)" "$(int_to_church 5)"                        # true
+church_to_int "$(church_div "$(int_to_church 13)" "$(int_to_church 4)")"   # 3
+```
+
+### Modular — clock arithmetic, which is what fixed-width hardware already does
+
+```bash
+mod_add 10 5 12        # 3    (5 hours after 10 o'clock)
+mod_pow 2 10 1000      # 24   (1024, keeping only mod 1000)
+mod_add_bits4 12 11    # 7    (12 + 11 = 23, and the 4-bit adder wraps: 23 - 16 = 7)
+```
+
+That last line is the punchline: the Layer-1 4-bit adder *is* a mod-16 clock — proven
+by running the real ripple adder and watching it wrap.
+
+---
+
+## Layer 5 — Combinators: the list kit, and Layer 1 rebuilt from the function side
+
+### The list-processing kit (standalone — no Layer 1 needed)
+
+```bash
+source ./list-processing-kit.sh
+```
+
+A Scheme-style toolkit over space-separated lists. Build a pipeline — the sum of the
+squares of the even numbers in 1..10:
+
+```bash
+EVEN='if (($1 % 2 == 0)); then echo true; else echo false; fi'
+foldl 'echo $(($1+$2))' 0 \
+  "$(map 'echo $(($1*$1))' \
+      "$(filter "$EVEN" "$(lrange 1 10)")")"      # 220   (4 + 16 + 36 + 64 + 100)
+```
+
+The predicate combinators make tidy identities literally true — e.g. `take_until p`
+is exactly `take_while (complement p)`:
+
+```bash
+take_until "$EVEN" '1 3 5 4 7'                     # 1 3 5
+take_while "$(complement "$EVEN")" '1 3 5 4 7'     # 1 3 5   (same)
+```
+
+### Combinator circuits — the same circuits, built as recipes
+
+```bash
+source ./combinator-circuits.sh
+```
+
+`combinator-circuits.sh` rebuilds Layer 1's word ops *declaratively* (as
+maps/zipwiths/folds) and proves the two constructions agree bit-for-bit:
+
+```bash
+# bitwise: fp_word_xor (a zipwith) must match Layer 1's word_xor (a loop)
+echo "fp=$(fp_word_xor "1 1 0 0" "1 0 1 0")   word_xor=$(word_xor "1 1 0 0" "1 0 1 0")"   # both 0 1 1 0
+
+# the centerpiece — the SAME 3+5 add, FOUR different constructions, one answer:
+echo "ripple_add4:      $(ripple_add4 1 1 0 0 1 0 1 0)"           # 0 0 0 1 0  (Layer 1, wired)
+echo "word_add:         $(word_add "1 1 0 0" "1 0 1 0")"          # 0 0 0 1 0  (Layer 1, whole rows)
+echo "fp_word_add:      $(fp_word_add "1 1 0 0" "1 0 1 0")"       # 0 0 0 1 0  (the adder as a foldl)
+echo "fp_word_add_scan: $(fp_word_add_scan "1 1 0 0" "1 0 1 0")"  # 0 0 0 1 0  (a scanl + zipwith3)
+
+# the carry chain (a scanl) — watch the carry ripple in at each column:
+fp_carry_chain "1 1 0 0" "1 0 1 0"     # 0 1 1 1 0   (carried in: none, 1, 1, 1; out: none)
+
+# n-ary: a 2-input op folded over several words (int_to_bits/bits_to_int come from Layer 1)
+bits_to_int "$(fp_add_words "$(int_to_bits 3 4)" "$(int_to_bits 5 4)" "$(int_to_bits 4 4)")"   # 12
+
+# shifts as pure list surgery (no arithmetic) — still equal to Layer 1's shl:
+echo "fp_shl=$(fp_shl "1 1 0 0")   shl=$(shl "1 1 0 0")"   # both 0 1 1 0
+```
+
+---
+
+## Layer 6 — Lambda calculus (SKI combinators)
+
+```bash
+source ./lambda.sh
+```
+
+The function side of computing: everything from three tiny machines — S, K, I. They
+are curried fn values, and `applyc` feeds them arguments one at a time:
+
+```bash
+applyc "$SKI_I" mug                          # mug        (I = do-nothing)
+applyc "$SKI_K" keep toss                    # keep       (K = keep the first, drop the rest)
+applyc "$SKI_S" "$SKI_K" "$SKI_K" anything   # anything   (S K K = I — you need even fewer pieces)
+
+# true/false are choosers (= K and K I); numbers are "do it n times":
+applyc "$LAMBDA_TRUE" yes no                          # yes
+applyc "$(lambda_church 4)" 'printf "%s*" "$1"' ''    # ****
+lambda_church_to_int "$(apply "$LAMBDA_SUCC" "$(lambda_church 4)")"   # 5   (successor adds one)
+```
+
+The other view: write the machines as letters on a line and crunch them by three
+rules. `lc_normalize` runs to the end; `lc_trace` shows every step:
+
+```bash
+lc_normalize 'S K K x'             # x          (S K K = identity, again — now as symbols)
+lc_normalize 'S (K S) K f g x'     # f (g x)    ("do one, then the other" falls out of S and K)
+lc_trace "$(lc_church 2) f x"      # watch the number 2 reduce, step by step, to  f (f x)
+```
+
+And it ties back to Layer 4 — the SKI-built numbers are the *same* numbers as the
+Church numerals there:
+
+```bash
+source ./alt-arithmetic.sh
+echo "lambda 3 = $(applyc "$(lambda_church 3)" 'printf "%s*" "$1"' '')"   # ***
+echo "church 3 = $(applyc "$(int_to_church 3)" 'printf "%s*" "$1"' '')"   # ***   (same number, built two ways)
+```
+
+---
+
 ## Implemented Extensions
 
 These started as ideas below and are now built-in library functions. Each has a
@@ -760,3 +1006,13 @@ above, and automated coverage in `test-boolean-funcs.sh`:
   pattern for `cos(x)` (even powers) and `sinh`/`cosh`.
 - **Adaptive Taylor term count**: keep adding terms until the next one falls
   below a tolerance, instead of a fixed count.
+- **A machine layer (the next big build)**: a finite-state machine, then a Turing
+  machine with a large *bounded* tape — the **machine** side to sit opposite Layer 6's
+  **function** side. The capstone is computing one function *both* ways (a Turing
+  machine and a Church/lambda term) and watching them agree: the Church–Turing thesis,
+  live. Tape cells would be Layer-1 bits, so a unary- or binary-increment machine could
+  be checked against `inc` / `ripple_add4`.
+- **β-reduction over real lambda terms**: the Layer-6 reducer works on `S`/`K`/`I`,
+  which dodge variable names entirely. A stepper over genuine `λ`-terms (with
+  capture-avoiding substitution) would close the loop — harder in bash, but a
+  satisfying stretch.
