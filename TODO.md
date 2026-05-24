@@ -214,15 +214,21 @@ Layer-1 twin bit-for-bit; `test-list-processing-kit.sh` grew 50 → 77. Full wri
 the next thing to build.** Land the punchline by computing the **same function two
 ways** and showing the answers agree:
 
-- [ ] Pick a function (e.g. "double", "add", or "is even").
-- [ ] Implement it as a **Turing machine** (TODO 1) and in the **lambda/Church**
-      world (TODO 2 + existing Church numerals), run both, assert equality.
-- [ ] Reuse the bridge that already exists: a Church numeral drives the Layer-1
-      `inc` circuit (`church_to_bits`) — the literal handshake between "function"
-      and "machine." Extend it: e.g. a unary-increment TM vs `church_succ`, or a
-      TM computing `n + m` vs `church_plus`.
-- [ ] A plain-English tutorial that ties the whole project together: gates →
-      arithmetic → machines → lambda → "they're all the same power."
+**Status — ✅ BUILT (2026-05-23):** `church-turing.sh` + `test-church-turing.sh`
+(46 passing). `ct_demo` shows it; README / OVERVIEW / MANUAL_TESTING_IDEAS document it.
+(Plain-English `TUTORIAL_CHURCH_TURING.md` still deferred — the last open sub-item.)
+
+- [x] Picked **successor (n→n+1)** and **addition (n+m)**.
+- [x] Each computed on **every** model and asserted equal: pure lambda/SKI
+      (`LAMBDA_SUCC`), Church numerals (`church_succ`/`church_plus`), a **Turing
+      machine** (`TM_BINARY_INC` / `TM_UNARY_ADD`), and the **Layer-1 gate circuit**
+      (`inc` / `word_add`) — four constructions, one answer.
+- [x] Featured the existing bridge: `church_to_bits` has a Church numeral drive the
+      Layer-1 `inc` circuit (`ct_church_to_bits_value`) — the literal function↔machine
+      handshake. (Successor via TM vs `church_succ` is exactly the suggested extension.)
+- [ ] A plain-English `TUTORIAL_CHURCH_TURING.md` tying the whole project together
+      (gates → arithmetic → machines → lambda → "they're all the same power") — deferred,
+      available on request like the other tutorials.
 
 ---
 

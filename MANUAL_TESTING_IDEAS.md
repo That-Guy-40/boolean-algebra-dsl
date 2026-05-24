@@ -978,6 +978,48 @@ echo "church 3 = $(applyc "$(int_to_church 3)" 'printf "%s*" "$1"' '')"   # *** 
 
 ---
 
+## The capstone — Church–Turing in action
+
+```bash
+source ./church-turing.sh    # pulls in every layer: gates, Church, lambda, machines
+```
+
+The finale: compute the **same function on every model** and watch them agree — the
+whole project in one handshake, and the most satisfying thing here to poke.
+
+```bash
+ct_show_succ 5      # successor, four ways (pure lambda / Church / Turing machine / gates)
+ct_show_add  3 4    # addition, four ways
+ct_demo             # a short tour, plus the function->circuit bridge
+```
+
+Each `ct_show_*` prints one line per model and a verdict. Change the numbers and watch
+all four constructions move in lockstep — pure lambda, Church numerals, a Turing
+machine, and the Layer-1 gate circuit — every one landing on the same answer.
+
+### Sweep it yourself — assert every model agrees
+
+```bash
+for n in 0 1 2 5 8; do
+    l=$(ct_succ_lambda $n); c=$(ct_succ_church $n); m=$(ct_succ_machine $n); g=$(ct_succ_circuit $n)
+    want=$((n + 1))
+    echo "succ $n: λ=$l church=$c TM=$m gates=$g  $([ "$l" = "$want" ] && [ "$c" = "$want" ] && [ "$m" = "$want" ] && [ "$g" = "$want" ] && echo AGREE || echo DIFFER)"
+done
+```
+
+### The literal function ↔ machine handshake
+
+A Church numeral is a pure function; `church_to_bits` makes it *drive the Layer-1 inc
+circuit* from zero, building its own bit pattern — function and machine shaking hands:
+
+```bash
+for n in 0 1 5 8 11; do echo "church_to_bits $n -> [$(church_to_bits $n)]  = $(ct_church_to_bits_value $n)"; done
+```
+
+(Keep the numbers small — Church and lambda count through the gates, so they are slow.)
+
+---
+
 ## Implemented Extensions
 
 These started as ideas below and are now built-in library functions. Each has a
@@ -1006,12 +1048,11 @@ above, and automated coverage in `test-boolean-funcs.sh`:
   pattern for `cos(x)` (even powers) and `sinh`/`cosh`.
 - **Adaptive Taylor term count**: keep adding terms until the next one falls
   below a tolerance, instead of a fixed count.
-- **A machine layer (the next big build)**: a finite-state machine, then a Turing
-  machine with a large *bounded* tape — the **machine** side to sit opposite Layer 6's
-  **function** side. The capstone is computing one function *both* ways (a Turing
-  machine and a Church/lambda term) and watching them agree: the Church–Turing thesis,
-  live. Tape cells would be Layer-1 bits, so a unary- or binary-increment machine could
-  be checked against `inc` / `ripple_add4`.
+- **More of the capstone**: the machine layer (FSM + Turing machine) and the
+  Church–Turing capstone now exist — see *The capstone — Church–Turing in action*
+  above. Natural next steps: more functions computed across *all* models (multiply,
+  predecessor, is-even), or a binary-addition / multiplication Turing machine to sit
+  beside the unary one.
 - **β-reduction over real lambda terms**: the Layer-6 reducer works on `S`/`K`/`I`,
   which dodge variable names entirely. A stepper over genuine `λ`-terms (with
   capture-avoiding substitution) would close the loop — harder in bash, but a

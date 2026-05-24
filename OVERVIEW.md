@@ -1,14 +1,16 @@
 # Boolean Algebra DSL & Bootstrapped Math Library
 
-A pure-Bash DSL for Boolean logic and arithmetic, extended with a continuous
-math library bootstrapped from a single binary operator.
+A pure-Bash DSL for Boolean logic and arithmetic, extended with a continuous math
+library bootstrapped from a single binary operator — and, beyond that core, a set of
+layers that explore *computation itself*, capped by a Church–Turing demonstration
+that ties everything together.
 
-Two source files, ~1 000 lines total:
-
-| File | Purpose |
-|---|---|
-| `boolean-funcs-new.sh` | 54 functions across three layers |
-| `test-boolean-funcs.sh` | 272 automated tests |
+The **core** is two files — `boolean-funcs-new.sh` and `test-boolean-funcs.sh`
+(**1022** passing tests) — across the three layers diagrammed below. The later
+**computation layers** (alternative arithmetic, a combinator/lambda toolkit, and
+finite-state / Turing machines) each live in their own file with their own test suite
+and reference doc; the **Beyond the core** section near the end maps them, and the
+**capstone** runs one function on every model at once.
 
 ---
 
@@ -582,6 +584,43 @@ layers compose correctly end to end.
 
 ---
 
+## Beyond the core — computation models & the Church–Turing capstone
+
+The three layers above are the original core. The project then grew a set of layers
+that explore *computation itself* — each in its own file, with its own test suite,
+reference doc, and plain-English tutorial, and each wired back down into the Layer-1
+gates:
+
+| Layer | File(s) | Reference | What it is |
+|---|---|---|---|
+| Alternative arithmetic | `alt-arithmetic.sh` | [`ALT_ARITHMETIC.md`](ALT_ARITHMETIC.md) | Peano, **Church numerals**, and modular arithmetic — three definitions of "number" |
+| Combinator toolkit | `list-processing-kit.sh` | *(header)* | a Scheme-style `map` / `fold` / `zipwith` toolkit over lists |
+| Combinator circuits | `combinator-circuits.sh` | [`COMBINATOR_CIRCUITS.md`](COMBINATOR_CIRCUITS.md) | Layer-1 word ops rebuilt from the function side (the adder as a `foldl`) |
+| Lambda calculus | `lambda.sh` | [`LAMBDA.md`](LAMBDA.md) | the **SKI** combinators; Church booleans / numerals built from S, K, I |
+| Machines | `state-machine.sh`, `turing-machine.sh` | [`MACHINES.md`](MACHINES.md) | a finite-state machine, then a bounded-tape **Turing machine** |
+
+### The capstone — one function, every model, the same answer
+
+`church-turing.sh` is the finale. It computes the **same function on every model** and
+shows they agree — the **Church–Turing thesis** made runnable, and the "it all bottoms
+out in the same gates" theme carried to its conclusion:
+
+```
+$ source ./church-turing.sh; ct_show_succ 5
+successor of 5  ->  6
+  function side  ·  pure lambda / SKI (LAMBDA_SUCC)  : 6
+  function side  ·  Church numeral   (church_succ)   : 6
+  machine side   ·  Turing machine   (TM_BINARY_INC) : 6
+  circuit        ·  Layer-1 gates    (inc)           : 6
+  => all four models agree
+```
+
+`ct_show_add N M` does the same for addition; `ct_demo` runs a tour; and
+`ct_church_to_bits_value N` is the literal handshake — a Church numeral (a pure
+function) driving the Layer-1 `inc` circuit to build its own bit pattern.
+
+---
+
 ## Test Suite
 
 Run with:
@@ -590,6 +629,12 @@ Run with:
 bash test-boolean-funcs.sh
 # 1022 passed, 0 failed
 ```
+
+The core suite above is the fast, pristine heart. The computation layers each carry
+their own suite (all green): `test-list-processing-kit.sh` (77), `test-alt-arithmetic.sh`
+(142), `test-combinator-circuits.sh` (111), `test-lambda.sh` (45),
+`test-state-machine.sh` (37), `test-turing-machine.sh` (40), and the capstone
+`test-church-turing.sh` (46).
 
 Coverage summary:
 
