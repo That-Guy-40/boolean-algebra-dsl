@@ -226,9 +226,10 @@ ways** and showing the answers agree:
 - [x] Featured the existing bridge: `church_to_bits` has a Church numeral drive the
       Layer-1 `inc` circuit (`ct_church_to_bits_value`) — the literal function↔machine
       handshake. (Successor via TM vs `church_succ` is exactly the suggested extension.)
-- [ ] A plain-English `TUTORIAL_CHURCH_TURING.md` tying the whole project together
-      (gates → arithmetic → machines → lambda → "they're all the same power") — deferred,
-      available on request like the other tutorials.
+- [x] A plain-English `TUTORIAL_CHURCH_TURING.md` tying the whole project together
+      (gates → arithmetic → machines → lambda → "they're all the same power") — written
+      (2026-05-23), in the Layer 1–6 voice; introduces the Turing machine for laypeople
+      and stages the four-way "contest" that all agrees. **The capstone is fully done.**
 
 ---
 
