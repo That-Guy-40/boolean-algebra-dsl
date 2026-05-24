@@ -604,6 +604,7 @@ gates:
 | Combinator circuits | `combinator-circuits.sh` | [`COMBINATOR_CIRCUITS.md`](COMBINATOR_CIRCUITS.md) | Layer-1 word ops rebuilt from the function side (the adder as a `foldl`) |
 | Lambda calculus | `lambda.sh` | [`LAMBDA.md`](LAMBDA.md) | the **SKI** combinators; Church booleans / numerals built from S, K, I |
 | Machines | `state-machine.sh`, `turing-machine.sh` | [`MACHINES.md`](MACHINES.md) | a finite-state machine, then a bounded-tape **Turing machine** |
+| Circuit trace | `circuit-trace.sh` | [`CIRCUIT_TRACE.md`](CIRCUIT_TRACE.md) | a read-only **viewer** over Layer 1 — `add_trace`/`sub_trace`/`alu_trace` draw the carry ripple and decode the flags |
 
 ### The capstone — one function, every model, the same answer
 
@@ -639,8 +640,8 @@ bash tests/test-boolean-funcs.sh
 The core suite above is the fast, pristine heart. The computation layers each carry
 their own suite (all green): `test-list-processing-kit.sh` (77), `test-alt-arithmetic.sh`
 (142), `test-combinator-circuits.sh` (111), `test-lambda.sh` (45),
-`test-state-machine.sh` (37), `test-turing-machine.sh` (40), and the capstone
-`test-church-turing.sh` (46).
+`test-state-machine.sh` (37), `test-turing-machine.sh` (40), the capstone
+`test-church-turing.sh` (46), and the Layer-1 viewer `test-circuit-trace.sh` (1118).
 
 Coverage summary:
 

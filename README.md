@@ -176,6 +176,14 @@ alu8 add $(int_to_bits 128 8) $(int_to_bits 128 8)  # 256 wraps to 0 -> Z=C=V=1
 sign_extend "$(int_to_bits 12 4)" 8   # -4 in 4-bit  -> "0 0 1 1 1 1 1 1"  (still -4)
 ```
 
+**Want to *see* the carry ripple?** `circuit-trace.sh` (see [`reference/CIRCUIT_TRACE.md`](reference/CIRCUIT_TRACE.md)) is a read-only viewer over this layer — `add_trace` / `sub_trace` draw the ripple-carry adder one bit at a time, and `alu_trace` decodes the Z/C/N/V flags into plain English. It's `fsm_trace` for the gates: it re-runs the real `full_adder`, so the picture can't drift from the circuit.
+
+```bash
+source ./circuit-trace.sh
+add_trace "1 0 1 0" "0 1 1 0"        # 5 + 6, watch the carry thread down the column
+alu_trace add "1 0 1 0" "0 1 1 0"    # result + decoded flags (here: signed overflow, V=1)
+```
+
 ## Layer 2 — EML Operator
 
 The EML operator (`eml(x,y) = exp(x) − ln(y)`) is **functionally complete in continuous mathematics** — combining it with the constant `1` is sufficient to express all standard calculator functions, in the same way NAND is sufficient for all Boolean logic.
@@ -358,11 +366,13 @@ successor of 5  ->  6
 .                          ← source the scripts from here (so `source ./x.sh` just works)
 ├── *.sh                   the library: boolean-funcs-new · alt-arithmetic ·
 │                            list-processing-kit · combinator-circuits · lambda ·
-│                            state-machine · turing-machine · church-turing
+│                            state-machine · turing-machine · church-turing ·
+│                            circuit-trace (a viewer over Layer 1)
 ├── tests/                 one suite per script   (run: bash tests/test-*.sh)
 ├── reference/             function-by-function deep dives: OVERVIEW · BOOLEAN_DSL ·
 │                            EML_OPERATOR · MATH_LIBRARY · ALT_ARITHMETIC ·
-│                            LIST_PROCESSING_KIT · COMBINATOR_CIRCUITS · LAMBDA · MACHINES
+│                            LIST_PROCESSING_KIT · COMBINATOR_CIRCUITS · LAMBDA ·
+│                            MACHINES · CIRCUIT_TRACE
 ├── ETHOS.md               the project's ethos & guiding aim (why it's built this way)
 ├── TUTORIAL_*.md          the plain-English walkthroughs (Layers 1–8)
 ├── MANUAL_TESTING_IDEAS.md   interactive experiments to try by hand
@@ -381,7 +391,7 @@ bash tests/test-boolean-funcs.sh
 
 Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions (incl. complement reductions `nand_all`/`nor_all`/`xnor_all` as exact negations, `all`/`any`/`none` aliases, and two-word `and_any`/`or_any`/`xor_any` cross-checked against `bits_eq` and `is_zero`), the `mux`/`word_mux` selector and `bits_min`/`bits_max` over a full grid, word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts (plus arithmetic `sar` and cyclic `rol`/`ror`), the width-generic `word_add`/`word_sub` (cross-checked bit-for-bit against `ripple_add4`/`ripple_add8`/`ripple_sub4`, and run at 8- and 16-bit width), the `zero_extend`/`sign_extend`/`trunc_bits` width bridges, the `alu4` and `alu8` ALUs (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases. The numeric layers are pinned against **independent `bc` oracles**: the base `eml(x,y)` operator against `e(x)−ln(y)`, the EML ops (`+`, `−`, `×`, `÷`, `^`, `neg`, `exp`, `ln`) against plain `bc` arithmetic — proving the `exp(x)−ln(y)` construction rebuilds ordinary math — both `eml_recip` and `eml_recip_auto` against `bc`'s `1/x`, the inverse hyperbolics against their `ln`/`sqrt` closed forms, and the derived trig (`tan`/`cot`/`sec`/`csc`) against `bc`'s `s()`/`c()` ratios. The shared `e` constant in the suite is `bc`'s `e(1)`, not `eml_e`, so the EML "= e" checks never compare the layer to itself.
 
-The slower / standalone layers have their own suites (all under `tests/`): `test-list-processing-kit.sh` (77 — the combinator kit alone, no Layer 1), `test-alt-arithmetic.sh` (142 — Peano / Church / modular), `test-combinator-circuits.sh` (111 — the function-side `fp_*` rebuilds, each checked bit-for-bit against its Layer-1 twin), `test-lambda.sh` (45 — SKI combinatory logic, cross-checked against the Church layer), `test-state-machine.sh` (37 — FSM verdicts vs ground truth), `test-turing-machine.sh` (40 — Turing machines, incl. binary-increment == `inc`), and `test-church-turing.sh` (46 — the capstone: one function, every model, same answer).
+The slower / standalone layers have their own suites (all under `tests/`): `test-list-processing-kit.sh` (77 — the combinator kit alone, no Layer 1), `test-alt-arithmetic.sh` (142 — Peano / Church / modular), `test-combinator-circuits.sh` (111 — the function-side `fp_*` rebuilds, each checked bit-for-bit against its Layer-1 twin), `test-lambda.sh` (45 — SKI combinatory logic, cross-checked against the Church layer), `test-state-machine.sh` (37 — FSM verdicts vs ground truth), `test-turing-machine.sh` (40 — Turing machines, incl. binary-increment == `inc`), `test-church-turing.sh` (46 — the capstone: one function, every model, same answer), and `test-circuit-trace.sh` (1118 — the Layer-1 viewer, every trace pinned against the real `word_add`/`word_sub`/`alu`).
 
 ## Attribution
 
