@@ -74,5 +74,26 @@ section "the two views agree (symbolic SKK and fn-value SKK both = identity)"
 check_str "symbolic  S K K q -> q" "q" "$(lc_normalize 'S K K q')"
 check_str "fn-value  S K K q -> q" "q" "$(applyc "$SKI_S" "$SKI_K" "$SKI_K" q)"
 
+section "PART 2 — lc_show: annotated reduction agrees with lc_normalize / lc_trace"
+# lc_show must reach the same normal form, in the same number of steps, as the
+# unannotated reducer — and its rule labels must match _lc_redex_rule / lc_step.
+show_nf ()    { printf '%s\n' "$1" | sed -n 's/^  normal form: \(.*\)   ([0-9].*/\1/p'; }
+show_steps () { printf '%s\n' "$1" | sed -n 's/.*(\([0-9]*\) step.*/\1/p'; }
+for t in 'I x' 'K x y' 'S K K x' 'S (K S) K f g x' 'S I I x' \
+         "$(lc_church 2) f x" "$(lc_church 3) f x" 'f x y'; do
+  out="$(lc_show "$t")"
+  check_str "lc_show nf [$t]"    "$(lc_normalize "$t")"        "$(show_nf "$out")"
+  check_str "lc_show steps [$t]" "$(lc_trace "$t" | grep -c '→')" "$(show_steps "$out")"
+done
+# the rule detector: present exactly when lc_step reduces, and the right combinator
+check_str "rule of 'S K K x' is S" "S" "$(_lc_redex_rule 'S K K x')"
+check_str "rule of 'K a b' is K"   "K" "$(_lc_redex_rule 'K a b')"
+check_str "rule of 'I a' is I"     "I" "$(_lc_redex_rule 'I a')"
+check_str "rule of nested 'a (I b) c' is I" "I" "$(_lc_redex_rule 'a (I b) c')"
+check_str "normal term has no rule" "" "$(_lc_redex_rule 'x y z')"
+# the annotation actually shows the rule schema
+check_str "lc_show labels the S schema" "yes" \
+  "$(lc_show 'S K K x' | grep -q 'S:  S x y z → x z (y z)' && echo yes)"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

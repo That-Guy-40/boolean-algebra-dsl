@@ -314,6 +314,14 @@ fp_carry_chain "1 1 0 0" "1 0 1 0"    # 0 1 1 1 0         (the carry chain, via 
 
 The punchline: **`word_add` (Layer-1 loop) == `fp_word_add` (foldl) == `fp_word_add_scan` (scanl + zipwith3) == `ripple_add8` (chained nibbles)** — four independent constructions of the adder, one answer. Verified in `test-combinator-circuits.sh` (111 passing).
 
+**Want to *see* the fold?** `combinator-trace.sh` (see [`reference/COMBINATOR_TRACE.md`](reference/COMBINATOR_TRACE.md)) is a read-only viewer over this layer: `fold_trace` / `scan_trace` / `map_trace` light up the kit combinators, and `fp_add_trace` shows the ripple adder *as a carry-threading `foldl`* — the same carry ripple `add_trace` drew for the gates, now revealed as a fold.
+
+```bash
+source ./combinator-trace.sh
+fold_trace 'echo $(($1+$2))' 0 '1 2 3 4 5'   # collapse a list to 15, step by step
+fp_add_trace "1 0 1 0" "0 1 1 0"             # 5 + 6: the carry ripple AS a fold
+```
+
 ## Lambda calculus — the function side
 
 `lambda.sh` (see [`reference/LAMBDA.md`](reference/LAMBDA.md) for the reference and [`TUTORIAL_LAYER6_LAMBDA.md`](TUTORIAL_LAYER6_LAMBDA.md) for a plain-English walkthrough) builds the **function side** of Church–Turing: the lambda calculus, via **combinatory logic** — the three combinators **S**, **K**, **I**, which sidestep variable-capture by having no variables at all. Two views, cross-checked against each other and against the Church numerals in `alt-arithmetic.sh`:
@@ -328,6 +336,7 @@ applyc "$(lambda_church 3)" 'printf "%s*" "$1"' ''   # ***   (a numeral built fr
 # …and as data you can watch reduce, by the rules  I a→a,  K a b→a,  S a b c→a c (b c):
 lc_normalize 'S (K S) K f g x'        # f (g x)       (compose, B = S(KS)K, falling out of S/K)
 lc_trace "$(lc_church 1) f x"         # SUCC ZERO f x  →  …  →  f x
+lc_show 'S K K x'                     # the same reduction, each step labelled [S/K/I: schema]
 ```
 
 `test-lambda.sh` (45 passing) checks both views agree, and that the SKI numerals match `int_to_church`.
@@ -376,12 +385,12 @@ successor of 5  ->  6
 ├── *.sh                   the library: boolean-funcs-new · alt-arithmetic ·
 │                            list-processing-kit · combinator-circuits · lambda ·
 │                            state-machine · turing-machine · church-turing ·
-│                            circuit-trace · alt-arithmetic-trace  (viewers)
+│                            circuit-trace · alt-arithmetic-trace · combinator-trace  (viewers)
 ├── tests/                 one suite per script   (run: bash tests/test-*.sh)
 ├── reference/             function-by-function deep dives: OVERVIEW · BOOLEAN_DSL ·
 │                            EML_OPERATOR · MATH_LIBRARY · ALT_ARITHMETIC ·
 │                            LIST_PROCESSING_KIT · COMBINATOR_CIRCUITS · LAMBDA ·
-│                            MACHINES · CIRCUIT_TRACE · ALT_ARITHMETIC_TRACE
+│                            MACHINES · CIRCUIT_TRACE · ALT_ARITHMETIC_TRACE · COMBINATOR_TRACE
 ├── ETHOS.md               the project's ethos & guiding aim (why it's built this way)
 ├── TUTORIAL_*.md          the plain-English walkthroughs (Layers 1–8)
 ├── MANUAL_TESTING_IDEAS.md   interactive experiments to try by hand
@@ -400,7 +409,7 @@ bash tests/test-boolean-funcs.sh
 
 Coverage: all gate truth tables, the full Boolean-algebra axiom set verified exhaustively (commutativity, associativity, distributivity, identity, complement, annihilator, absorption, idempotence, involution, De Morgan), word-level bitwise ops and reductions (incl. complement reductions `nand_all`/`nor_all`/`xnor_all` as exact negations, `all`/`any`/`none` aliases, and two-word `and_any`/`or_any`/`xor_any` cross-checked against `bits_eq` and `is_zero`), the `mux`/`word_mux` selector and `bits_min`/`bits_max` over a full grid, word helpers and predicates (inc/dec/negate wrap and inverses, is_one/is_even/is_odd/is_negative, parity = popcount mod 2, bits_to_int round-trips), all 8 full-adder combinations, multi-bit ripple adders/subtractors (decoded sums and signed two's-complement results), magnitude comparators (full lt/eq/gt grids plus cascaded-priority edge cases), `int_to_bits` round-trips, logical shifts (plus arithmetic `sar` and cyclic `rol`/`ror`), the width-generic `word_add`/`word_sub` (cross-checked bit-for-bit against `ripple_add4`/`ripple_add8`/`ripple_sub4`, and run at 8- and 16-bit width), the `zero_extend`/`sign_extend`/`trunc_bits` width bridges, the `alu4` and `alu8` ALUs (every opcode plus Z/C/N/V flag cases — overflow, carry, borrow, zero), EML mutual inverses, arithmetic round-trips, EML applications (integer powers, Newton reciprocal vs `eml_div`, comparator-seeded `eml_recip_auto`, Taylor sine vs `bc`), trig/inverse-trig/hyperbolic round-trips, domain error cases. The numeric layers are pinned against **independent `bc` oracles**: the base `eml(x,y)` operator against `e(x)−ln(y)`, the EML ops (`+`, `−`, `×`, `÷`, `^`, `neg`, `exp`, `ln`) against plain `bc` arithmetic — proving the `exp(x)−ln(y)` construction rebuilds ordinary math — both `eml_recip` and `eml_recip_auto` against `bc`'s `1/x`, the inverse hyperbolics against their `ln`/`sqrt` closed forms, and the derived trig (`tan`/`cot`/`sec`/`csc`) against `bc`'s `s()`/`c()` ratios. The shared `e` constant in the suite is `bc`'s `e(1)`, not `eml_e`, so the EML "= e" checks never compare the layer to itself.
 
-The slower / standalone layers have their own suites (all under `tests/`): `test-list-processing-kit.sh` (77 — the combinator kit alone, no Layer 1), `test-alt-arithmetic.sh` (142 — Peano / Church / modular), `test-combinator-circuits.sh` (111 — the function-side `fp_*` rebuilds, each checked bit-for-bit against its Layer-1 twin), `test-lambda.sh` (45 — SKI combinatory logic, cross-checked against the Church layer), `test-state-machine.sh` (37 — FSM verdicts vs ground truth), `test-turing-machine.sh` (40 — Turing machines, incl. binary-increment == `inc`), `test-church-turing.sh` (46 — the capstone: one function, every model, same answer), `test-circuit-trace.sh` (1118 — the Layer-1 viewer, every trace pinned against the real `word_add`/`word_sub`/`alu`), and `test-alt-arithmetic-trace.sh` (131 — the Layer-4 viewer, pinned against the real `peano_*`/`church_*`/`mod_*`).
+The slower / standalone layers have their own suites (all under `tests/`): `test-list-processing-kit.sh` (77 — the combinator kit alone, no Layer 1), `test-alt-arithmetic.sh` (142 — Peano / Church / modular), `test-combinator-circuits.sh` (111 — the function-side `fp_*` rebuilds, each checked bit-for-bit against its Layer-1 twin), `test-lambda.sh` (67 — SKI combinatory logic, cross-checked against the Church layer, incl. `lc_show`'s annotated reduction), `test-state-machine.sh` (37 — FSM verdicts vs ground truth), `test-turing-machine.sh` (40 — Turing machines, incl. binary-increment == `inc`), `test-church-turing.sh` (46 — the capstone: one function, every model, same answer), `test-circuit-trace.sh` (1118 — the Layer-1 viewer, every trace pinned against the real `word_add`/`word_sub`/`alu`), `test-alt-arithmetic-trace.sh` (131 — the Layer-4 viewer, pinned against the real `peano_*`/`church_*`/`mod_*`), and `test-combinator-trace.sh` (75 — the Layer-5 viewer, pinned against the real `foldl`/`scanl`/`map`/`fp_word_add`).
 
 ## Attribution
 
@@ -465,7 +474,7 @@ applyc
 SKI_I  SKI_K  SKI_S  SKI_B  SKI_C  SKI_W
 LAMBDA_TRUE  LAMBDA_FALSE  LAMBDA_ZERO  LAMBDA_SUCC
 lambda_church  lambda_church_to_int
-lc_step  lc_normalize  lc_trace  lc_church
+lc_step  lc_normalize  lc_trace  lc_show  lc_church
 
 # Finite state machine (state-machine.sh)
 fsm_step  fsm_run  fsm_trace  fsm_accepts

@@ -606,6 +606,7 @@ gates:
 | Machines | `state-machine.sh`, `turing-machine.sh` | [`MACHINES.md`](MACHINES.md) | a finite-state machine, then a bounded-tape **Turing machine** |
 | Circuit trace | `circuit-trace.sh` | [`CIRCUIT_TRACE.md`](CIRCUIT_TRACE.md) | a read-only **viewer** over Layer 1 — `add_trace`/`sub_trace`/`alu_trace` draw the carry ripple and decode the flags |
 | Alt-arithmetic trace | `alt-arithmetic-trace.sh` | [`ALT_ARITHMETIC_TRACE.md`](ALT_ARITHMETIC_TRACE.md) | a read-only **viewer** over Layer 4 — the Peano successor tower, the Church numeral iterating, the modular clock wrap |
+| Combinator trace | `combinator-trace.sh` | [`COMBINATOR_TRACE.md`](COMBINATOR_TRACE.md) | a read-only **viewer** over Layer 5 — `fold_trace`/`scan_trace`/`map_trace` and the ripple adder revealed as a `foldl` |
 
 ### The capstone — one function, every model, the same answer
 
@@ -642,8 +643,10 @@ The core suite above is the fast, pristine heart. The computation layers each ca
 their own suite (all green): `test-list-processing-kit.sh` (77), `test-alt-arithmetic.sh`
 (142), `test-combinator-circuits.sh` (111), `test-lambda.sh` (45),
 `test-state-machine.sh` (37), `test-turing-machine.sh` (40), the capstone
-`test-church-turing.sh` (46), the Layer-1 viewer `test-circuit-trace.sh` (1118), and the
-Layer-4 viewer `test-alt-arithmetic-trace.sh` (131).
+`test-church-turing.sh` (46), the Layer-1 viewer `test-circuit-trace.sh` (1118), the
+Layer-4 viewer `test-alt-arithmetic-trace.sh` (131), and the Layer-5 viewer
+`test-combinator-trace.sh` (75). (`test-lambda.sh` also covers the `lc_show` annotated
+reducer.)
 
 Coverage summary:
 

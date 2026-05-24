@@ -139,6 +139,51 @@ lc_trace () {      # print the entire reduction sequence, one step per line
   for ((i=0; i<max; i++)); do r="$(lc_step "$t")" || break; printf '  → %s\n' "$r"; t="$r"; done
 }
 
+# Which rule fires next? Mirrors lc_step's normal-order search but reduces nothing —
+# it just names the combinator at the leftmost-outermost redex (S / K / I), or "" if
+# the term is already in normal form. lc_show pairs it with lc_step to annotate steps.
+_lc_redex_rule () {
+  local term toks head n i
+  term="$(_lc_strip "$1")"
+  mapfile -t toks < <(_lc_split "$term")
+  while [ "${#toks[@]}" -ge 1 ] && [ "${toks[0]:0:1}" = "(" ]; do
+    term="$(_lc_strip "$(_lc_strip "${toks[0]}") ${toks[*]:1}")"
+    mapfile -t toks < <(_lc_split "$term")
+  done
+  head="${toks[0]}"; n="${#toks[@]}"
+  case "$head" in
+    I) ((n>=2)) && { printf 'I'; return 0; } ;;
+    K) ((n>=3)) && { printf 'K'; return 0; } ;;
+    S) ((n>=4)) && { printf 'S'; return 0; } ;;
+  esac
+  for ((i=1; i<n; i++)); do                                   # else: leftmost reducible argument
+    local sub r; sub="$(_lc_strip "${toks[i]}")"; r="$(_lc_redex_rule "$sub")"
+    [ -n "$r" ] && { printf '%s' "$r"; return 0; }
+  done
+  return 1                                                    # normal form
+}
+
+# Like lc_trace, but ANNOTATES each step with the combinator rule that fired and its
+# schema — so you can read *why* the term changed, not just that it did. Ends with the
+# normal form and the step count.
+lc_show () {
+  local t r rule max="${2:-1000}" i n=0 schema
+  t="$(_lc_strip "$1")"
+  printf '  %s\n' "$t"
+  for ((i=0; i<max; i++)); do
+    rule="$(_lc_redex_rule "$t")" || break
+    r="$(lc_step "$t")" || break
+    case "$rule" in
+      I) schema='I x → x' ;;
+      K) schema='K x y → x' ;;
+      S) schema='S x y z → x z (y z)' ;;
+    esac
+    printf '    → %-22s [%s:  %s]\n' "$r" "$rule" "$schema"
+    t="$r"; n=$((n+1))
+  done
+  printf '  normal form: %s   (%d step%s)\n' "$t" "$n" "$([ "$n" = 1 ] || echo s)"
+}
+
 # Symbolic numerals for the reducer: ZERO = K I, SUCC = S B = S (S (K S) K).
 LC_ZERO='(K I)'
 LC_SUCC='(S (S (K S) K))'

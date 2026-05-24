@@ -114,3 +114,11 @@ The combinator suite asserts each `fp_*` equals its Layer-1 twin across 4- and 8
 grids (and that the three adder constructions agree); the kit suite exercises the
 generic combinators (`none`/`count_if`/`and_list`/`complement`/`zipwith3`/…) with no
 Layer-1 dependency at all.
+
+---
+
+*Want to **watch** these folds run? [`COMBINATOR_TRACE.md`](COMBINATOR_TRACE.md) is a
+read-only viewer — `fold_trace`/`scan_trace`/`map_trace` for the kit combinators, and
+`fp_add_trace` shows the ripple adder *as a `foldl`* (the same carry ripple
+[`CIRCUIT_TRACE.md`](CIRCUIT_TRACE.md) drew for the gates). The plain-English build is
+[`../TUTORIAL_LAYER5_COMBINATORS.md`](../TUTORIAL_LAYER5_COMBINATORS.md).*

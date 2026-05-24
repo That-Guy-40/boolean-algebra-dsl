@@ -101,6 +101,19 @@ reducing to `f x`:
   → f x
 ```
 
+`lc_show` is `lc_trace`'s annotated sibling: it labels each step with the **rule that
+fired** (S / K / I) and its schema, and ends with the step count — so you read *why* the
+term changed, not just that it did. (`_lc_redex_rule` names the next redex's combinator;
+`lc_show` reaches the same normal form, in the same number of steps, as `lc_normalize`.)
+
+```
+lc_show 'S K K x'
+  S K K x
+    → K x (K x)              [S:  S x y z → x z (y z)]
+    → x                      [K:  K x y → x]
+  normal form: x   (2 steps)
+```
+
 ## The payoff
 
 Two ways to *be* the lambda calculus — functions you run, and symbols you rewrite —
