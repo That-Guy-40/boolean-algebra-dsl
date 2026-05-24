@@ -1,4 +1,4 @@
-# CLAUDE.md — project ethos & working notes
+# Project Ethos & Working Notes
 
 *Read me first. This is **why** the project exists and **how** to work in it; see
 `TODO.md` for the concrete roadmap (and the Church–Turing north star), and
