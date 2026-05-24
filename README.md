@@ -394,6 +394,30 @@ successor of 5  ->  6
 
 `ct_show_add N M` does the same for addition; `ct_demo` runs a tour; and `ct_church_to_bits_value N` is the literal handshake — a Church numeral (a pure function) driving the `inc` gate circuit to build its own bits. `test-church-turing.sh` (46 passing) asserts the agreement. **This is the gates → arithmetic → machines → lambda → "all the same power" payoff the whole repo builds toward** — and [`TUTORIAL_LAYER8_CHURCH_TURING.md`](TUTORIAL_LAYER8_CHURCH_TURING.md) is its plain-English walkthrough.
 
+## Viewers — watch each layer compute
+
+Every layer has a **viewer**: read-only functions that print the layer's hidden work — the carry rippling through the adder, one `eml` operator rebuilding `×`, a Church numeral counting, an SKI term reducing. Each is read-only (it changes nothing in the layer it views), drives the layer's *real* functions (so the picture can't drift from the computation), and ships a standalone test suite that pins its output against those functions.
+
+**How to run a viewer.** They are **functions, not runnable programs**: `source` the script once (it pulls in the layers it needs), then call a function by name with arguments. Running a `*-trace.sh` file directly does nothing — it only *defines* functions (the usage examples live in comments at the foot of each file). The exception is the matching `tests/test-*.sh`, which you *do* run directly (`bash tests/test-eml-trace.sh`).
+
+```bash
+source ./eml-trace.sh      # defines the functions (prints nothing)
+eml_trace mul 3 4          # then call one  →  watch × rebuilt from the eml operator
+eml_recip_trace 1.5        # …or the Newton reciprocal, step by step
+```
+
+| Layer | `source` once | Functions to call |
+|---|---|---|
+| 1 — Boolean DSL / ALU | `./circuit-trace.sh` | `add_trace A B [Cin]` · `sub_trace A B` · `alu_trace OP A B` · `bits_show "BITS"` |
+| 2 — EML operator | `./eml-trace.sh` | `eml_trace OP a b` · `eml_recip_trace x [iters] [y0]` · `eml_sin_trace x [terms]` |
+| 3 — Math library | `./math-trace.sh` | `math_trace NAME args…` |
+| 4 — Alt arithmetic | `./alt-arithmetic-trace.sh` | `peano_trace OP a b` · `church_trace N [int\|bits]` · `mod_trace OP a b n` · `mod_trace_pow base e n` |
+| 5 — Combinator circuits | `./combinator-trace.sh` | `fold_trace F init "list"` · `scan_trace F init "list"` · `map_trace F "list"` · `fp_add_trace A B [Cin]` |
+| 6 — Lambda / SKI | `./lambda.sh` | `lc_trace TERM` · `lc_show TERM` (also `lc_step`, `lc_normalize`) |
+| Machines | `./turing-machine.sh` | `fsm_trace TABLE START INPUT` · `tm_trace TABLE HALTS START INPUT` |
+
+Each viewer's `reference/*_TRACE.md` documents its functions in full; this table is the "what do I type" quick map. (For Layer 6 the reducer/`lc_show` live in `lambda.sh` itself; the machines' `fsm_trace`/`tm_trace` ship with their layer — the rest are dedicated `*-trace.sh` files.) Bit strings are LSB-first throughout.
+
 ## Repository layout
 
 ```

@@ -610,6 +610,33 @@ gates:
 | Alt-arithmetic trace | `alt-arithmetic-trace.sh` | [`ALT_ARITHMETIC_TRACE.md`](ALT_ARITHMETIC_TRACE.md) | a read-only **viewer** over Layer 4 — the Peano successor tower, the Church numeral iterating, the modular clock wrap |
 | Combinator trace | `combinator-trace.sh` | [`COMBINATOR_TRACE.md`](COMBINATOR_TRACE.md) | a read-only **viewer** over Layer 5 — `fold_trace`/`scan_trace`/`map_trace` and the ripple adder revealed as a `foldl` |
 
+### Viewers — how to run them
+
+Every layer has a **viewer**: read-only functions that print the layer's hidden work
+(the Church–Turing-thesis cousin of `printf`-debugging). They are **functions, not
+runnable programs** — `source` the script once (it pulls in the layers it needs), then
+call a function by name. Running a `*-trace.sh` file directly does nothing; it only
+*defines* functions (usage examples live in comments at the foot of each file). The one
+thing you *do* run directly is the matching `tests/test-*.sh`.
+
+```bash
+source ./eml-trace.sh      # defines the functions (prints nothing)
+eml_trace mul 3 4          # then call one
+```
+
+| Layer | `source` once | Functions to call |
+|---|---|---|
+| 1 — Boolean DSL / ALU | `./circuit-trace.sh` | `add_trace A B [Cin]` · `sub_trace A B` · `alu_trace OP A B` · `bits_show "BITS"` |
+| 2 — EML operator | `./eml-trace.sh` | `eml_trace OP a b` · `eml_recip_trace x [iters] [y0]` · `eml_sin_trace x [terms]` |
+| 3 — Math library | `./math-trace.sh` | `math_trace NAME args…` |
+| 4 — Alt arithmetic | `./alt-arithmetic-trace.sh` | `peano_trace OP a b` · `church_trace N [int\|bits]` · `mod_trace OP a b n` · `mod_trace_pow base e n` |
+| 5 — Combinator circuits | `./combinator-trace.sh` | `fold_trace F init "list"` · `scan_trace F init "list"` · `map_trace F "list"` · `fp_add_trace A B [Cin]` |
+| 6 — Lambda / SKI | `./lambda.sh` | `lc_trace TERM` · `lc_show TERM` (also `lc_step`, `lc_normalize`) |
+| Machines | `./turing-machine.sh` | `fsm_trace TABLE START INPUT` · `tm_trace TABLE HALTS START INPUT` |
+
+(The `*_TRACE.md` reference for each viewer documents its functions in full; this table
+is just the "what do I type" quick map. Bit strings are LSB-first throughout.)
+
 ### The capstone — one function, every model, the same answer
 
 `church-turing.sh` is the finale. It computes the **same function on every model** and
