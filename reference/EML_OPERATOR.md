@@ -113,6 +113,10 @@ bc's `e(1)`, not `eml_e`, so the "= e" checks can't be circular.) Run via
 
 ---
 
+*Want to **watch** eml rebuild arithmetic? [`EML_TRACE.md`](EML_TRACE.md) is a read-only
+viewer — `eml_trace` shows `+−×÷` as a tree of `eml` calls, and `eml_recip_trace` /
+`eml_sin_trace` walk the Newton reciprocal and Taylor sine step by step.*
+
 *Plain-English walkthrough: [`../TUTORIAL_LAYER2.md`](../TUTORIAL_LAYER2.md). Below it sits
 [`BOOLEAN_DSL.md`](BOOLEAN_DSL.md) (Layer 1 — whose comparator `eml_recip_auto` borrows);
 above it, [`MATH_LIBRARY.md`](MATH_LIBRARY.md) (Layer 3) adds the trig / hyperbolic

@@ -605,6 +605,8 @@ gates:
 | Lambda calculus | `lambda.sh` | [`LAMBDA.md`](LAMBDA.md), [`LAMBDA_TRACE.md`](LAMBDA_TRACE.md) | the **SKI** combinators (apply-able), plus the symbolic reducer that rewrites SKI terms step by step (`lc_trace` / `lc_show`) |
 | Machines | `state-machine.sh`, `turing-machine.sh` | [`MACHINES.md`](MACHINES.md) | a finite-state machine, then a bounded-tape **Turing machine** |
 | Circuit trace | `circuit-trace.sh` | [`CIRCUIT_TRACE.md`](CIRCUIT_TRACE.md) | a read-only **viewer** over Layer 1 — `add_trace`/`sub_trace`/`alu_trace` draw the carry ripple and decode the flags |
+| EML trace | `eml-trace.sh` | [`EML_TRACE.md`](EML_TRACE.md) | a read-only **viewer** over Layer 2 — `eml_trace` shows `+−×÷` as a tree of `eml` calls; `eml_recip_trace` / `eml_sin_trace` walk Newton & Taylor |
+| Math trace | `math-trace.sh` | [`MATH_TRACE.md`](MATH_TRACE.md) | a read-only **viewer** over Layer 3 — `math_trace` decomposes a derived function into bc's six primitives |
 | Alt-arithmetic trace | `alt-arithmetic-trace.sh` | [`ALT_ARITHMETIC_TRACE.md`](ALT_ARITHMETIC_TRACE.md) | a read-only **viewer** over Layer 4 — the Peano successor tower, the Church numeral iterating, the modular clock wrap |
 | Combinator trace | `combinator-trace.sh` | [`COMBINATOR_TRACE.md`](COMBINATOR_TRACE.md) | a read-only **viewer** over Layer 5 — `fold_trace`/`scan_trace`/`map_trace` and the ripple adder revealed as a `foldl` |
 
@@ -641,12 +643,13 @@ bash tests/test-boolean-funcs.sh
 
 The core suite above is the fast, pristine heart. The computation layers each carry
 their own suite (all green): `test-list-processing-kit.sh` (77), `test-alt-arithmetic.sh`
-(142), `test-combinator-circuits.sh` (111), `test-lambda.sh` (45),
+(142), `test-combinator-circuits.sh` (111), `test-lambda.sh` (67),
 `test-state-machine.sh` (37), `test-turing-machine.sh` (40), the capstone
 `test-church-turing.sh` (46), the Layer-1 viewer `test-circuit-trace.sh` (1118), the
-Layer-4 viewer `test-alt-arithmetic-trace.sh` (131), and the Layer-5 viewer
-`test-combinator-trace.sh` (75). (`test-lambda.sh` also covers the `lc_show` annotated
-reducer.)
+Layer-4 viewer `test-alt-arithmetic-trace.sh` (131), the Layer-5 viewer
+`test-combinator-trace.sh` (75), the Layer-2 viewer `test-eml-trace.sh` (22), and the
+Layer-3 viewer `test-math-trace.sh` (21). (`test-lambda.sh` also covers the `lc_show`
+annotated reducer.)
 
 Coverage summary:
 

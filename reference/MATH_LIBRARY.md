@@ -81,6 +81,10 @@ confirmed to fail cleanly. Run via `bash tests/test-boolean-funcs.sh`.
 
 ---
 
+*Want to **watch** a function decompose into the six primitives? [`MATH_TRACE.md`](MATH_TRACE.md)
+is a read-only viewer — `math_trace NAME args` takes a derived function apart into bc's
+`s`/`c`/`a`/`l`/`e`/`sqrt` and shows each sub-expression evaluate.*
+
 *Plain-English walkthrough: [`../TUTORIAL_LAYER3.md`](../TUTORIAL_LAYER3.md). This is the
 top of the continuous-math tower; it stands on [`EML_OPERATOR.md`](EML_OPERATOR.md)
 (Layer 2), which stands on [`BOOLEAN_DSL.md`](BOOLEAN_DSL.md) (Layer 1). Every layer at
