@@ -392,7 +392,7 @@ successor of 5  ->  6
   => all four models agree
 ```
 
-`ct_show_add N M` does the same for addition; `ct_demo` runs a tour; and `ct_church_to_bits_value N` is the literal handshake — a Church numeral (a pure function) driving the `inc` gate circuit to build its own bits. `test-church-turing.sh` (46 passing) asserts the agreement. **This is the gates → arithmetic → machines → lambda → "all the same power" payoff the whole repo builds toward** — and [`TUTORIAL_LAYER8_CHURCH_TURING.md`](TUTORIAL_LAYER8_CHURCH_TURING.md) is its plain-English walkthrough.
+`ct_show_add N M` does the same for addition; `ct_demo` runs a tour; and `ct_church_to_bits_value N` is the literal handshake — a Church numeral (a pure function) driving the `inc` gate circuit to build its own bits. `test-church-turing.sh` (46 passing) asserts the agreement. **This is the gates → arithmetic → machines → lambda → "all the same power" payoff the whole repo builds toward** — [`reference/CHURCH_TURING.md`](reference/CHURCH_TURING.md) is the focused reference, and [`TUTORIAL_LAYER8_CHURCH_TURING.md`](TUTORIAL_LAYER8_CHURCH_TURING.md) is its plain-English walkthrough.
 
 ## Viewers — watch each layer compute
 

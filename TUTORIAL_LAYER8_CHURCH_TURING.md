@@ -223,5 +223,5 @@ recipes; **[6](TUTORIAL_LAYER6_LAMBDA.md)** built everything from three tiny fun
 **[7](TUTORIAL_LAYER7_MACHINES.md)** built the machine side — a rule-follower and a roll
 of tape — and this finale showed that all of it, every road, computes the same things.
 One humble idea — switches, stacked cleverly — became a whole world, and then turned out
-to be *the only world there is.* For the precise reference behind the finale, see the
-capstone section of `reference/OVERVIEW.md` and the comments in `church-turing.sh`.*
+to be *the only world there is.* For the precise reference behind the finale, see
+[`reference/CHURCH_TURING.md`](reference/CHURCH_TURING.md).*

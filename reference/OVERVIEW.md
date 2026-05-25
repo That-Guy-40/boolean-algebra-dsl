@@ -639,6 +639,8 @@ is just the "what do I type" quick map. Bit strings are LSB-first throughout.)
 
 ### The capstone — one function, every model, the same answer
 
+*Focused reference: [`CHURCH_TURING.md`](CHURCH_TURING.md).*
+
 `church-turing.sh` is the finale. It computes the **same function on every model** and
 shows they agree — the **Church–Turing thesis** made runnable, and the "it all bottoms
 out in the same gates" theme carried to its conclusion:
